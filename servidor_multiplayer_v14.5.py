@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Oito Entradas v14.5 · pacote de jogo 22.2 - servidor local/LAN para salas WebSocket com classes por jogador.
+"""Oito Entradas v14.5 · pacote de jogo 22.3 - servidor HTTP e salas WebSocket para Render/LAN.
 Sem bibliotecas externas. Até 4 pessoas por sala, código aleatório de 6 caracteres.
 """
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -92,7 +92,7 @@ class Handler(SimpleHTTPRequestHandler):
         parsed=urllib.parse.urlparse(self.path)
         if parsed.path!="/ws":
             if parsed.path in ("/healthz", "/health"):
-                body=json.dumps({"status":"ok","version":"22.2"}).encode("utf-8")
+                body=json.dumps({"status":"ok","version":"22.3"}).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
@@ -100,9 +100,9 @@ class Handler(SimpleHTTPRequestHandler):
                 self.wfile.write(body)
                 return
             if parsed.path in ("/", "/index.html", "/game"):
-                self.path="/Oito_Entradas_v22.2.html"
+                self.path="/index.html"
             elif parsed.path in ("/editor", "/editor.html"):
-                self.path="/Oito_Entradas_Editor_v22.2.html"
+                self.path="/editor.html"
             return super().do_GET()
         key=self.headers.get("Sec-WebSocket-Key")
         if not key or self.headers.get("Upgrade","").lower()!="websocket":
@@ -241,7 +241,7 @@ if __name__=="__main__":
     os.chdir(ROOT)
     server=Server((HOST,PORT),Handler)
     print("="*58)
-    print(" OITO ENTRADAS v22.2 · SALAS MULTIPLAYER + CLASSES")
+    print(" OITO ENTRADAS v22.3 · SERVIDOR MULTIPLAYER + JOGO")
     print("="*58)
     print(f"Neste computador: http://127.0.0.1:{PORT}/")
     for ip in lan_addresses(): print(f"Na mesma rede Wi-Fi/LAN: http://{ip}:{PORT}")

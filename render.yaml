@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: oito-entradas
+    name: estradasdanoite
     runtime: python
     plan: free
     buildCommand: pip install --no-input -r requirements.txt

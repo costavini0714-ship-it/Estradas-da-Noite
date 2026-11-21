@@ -1,0 +1,15 @@
+OITO ENTRADAS / ESTRADAS DA NOITE — VERSÃO 22.3
+
+Arquivos principais:
+- index.html: jogo público
+- editor.html: editor completo
+- servidor_multiplayer_v14.5.py: servidor HTTP + multiplayer/WebSocket
+- requirements.txt: dependências
+- render.yaml: configuração para Render Blueprint
+- Procfile: comando alternativo do serviço
+
+Deploy no Render: Python 3, Build Command: pip install --no-input -r requirements.txt; Start Command: python servidor_multiplayer_v14.5.py.
+
+O editor salva configurações no armazenamento do navegador. Para refletir ajustes no jogo, mantenha editor e jogo na mesma origem/domínio e atualize a aba do jogo depois de salvar. Use Exportar/Importar para guardar e transportar configurações.
+
+Novidades 22.3: correção do desbloqueio após retornar, limpeza de teclas presas, comida/água em unidades inteiras, refeições de equipe, ordem automática offline, retomada de construção após coleta, painéis maiores e editor total de classes/menu/mapa.
