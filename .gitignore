@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor/game temporary files and local backups
+*.tmp
+*.bak
+*.old
+*.backup
+.DS_Store
+Thumbs.db
+
+# Versioned export copies: keep stable deploy entrypoints index.html/editor.html
+*_v*.html
+*_v*.zip
+*_v*.md
+*.zip
+
+# Local secrets (configure these in Render Environment instead)
+.env
+.env.*
+!.env.example
+
+# Local editor data should not be committed
+editor_config.json

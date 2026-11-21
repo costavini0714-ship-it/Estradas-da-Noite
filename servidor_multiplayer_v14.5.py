@@ -15,6 +15,23 @@ ALLOWED_CLASSES = {"survivor", "soldier", "medic", "rescuer", "explorer", "scout
 CODES = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 ROOMS = {}
 LOCK = threading.RLock()
+EDITOR_CONFIG_PATH = Path(os.environ.get("EDITOR_CONFIG_PATH", str(Path(os.environ.get("RENDER_DISK_PATH", ROOT)) / "editor_config.json")))
+MAX_EDITOR_CONFIG_BYTES = 2_000_000
+
+def load_editor_config():
+    try:
+        if EDITOR_CONFIG_PATH.exists():
+            data = json.loads(EDITOR_CONFIG_PATH.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+    except Exception as exc:
+        print("[EDITOR] Não foi possível ler configuração:", exc)
+    return {}
+
+def save_editor_config(data):
+    EDITOR_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temp = EDITOR_CONFIG_PATH.with_suffix(".tmp")
+    temp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    temp.replace(EDITOR_CONFIG_PATH)
 
 class RoomError(Exception): pass
 
@@ -91,6 +108,15 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed=urllib.parse.urlparse(self.path)
         if parsed.path!="/ws":
+            if parsed.path == "/api/editor-config":
+                body=json.dumps({"config":load_editor_config()},ensure_ascii=False).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type","application/json; charset=utf-8")
+                self.send_header("Cache-Control","no-store")
+                self.send_header("Content-Length",str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if parsed.path in ("/healthz", "/health"):
                 body=json.dumps({"status":"ok","version":"22.3"}).encode("utf-8")
                 self.send_response(200)
@@ -116,6 +142,39 @@ class Handler(SimpleHTTPRequestHandler):
         except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError): pass
         except Exception as exc: print("[WS] conexão encerrada:",exc)
         finally: self.remove_peer()
+    def do_POST(self):
+        parsed=urllib.parse.urlparse(self.path)
+        if parsed.path != "/api/editor-config":
+            self.send_error(404,"Not found"); return
+        expected=os.environ.get("EDITOR_TOKEN","").strip()
+        supplied=self.headers.get("X-Editor-Token","").strip()
+        if not expected:
+            self.send_error(503,"Configure EDITOR_TOKEN nas variáveis de ambiente do Render."); return
+        if not secrets.compare_digest(supplied,expected):
+            self.send_error(403,"Token do editor inválido."); return
+        try:
+            length=int(self.headers.get("Content-Length","0"))
+            if length<=0 or length>MAX_EDITOR_CONFIG_BYTES:
+                self.send_error(413,"Configuração vazia ou maior que 2 MB."); return
+            raw=self.rfile.read(length)
+            data=json.loads(raw.decode("utf-8"))
+            if not isinstance(data,dict) or not isinstance(data.get("enemies",{}),dict):
+                self.send_error(400,"Formato de configuração inválido."); return
+            save_editor_config(data)
+            body=json.dumps({"ok":True,"saved":True},ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type","application/json; charset=utf-8")
+            self.send_header("Cache-Control","no-store")
+            self.send_header("Content-Length",str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            print("[EDITOR] Configuração atualizada pelo editor.")
+        except (ValueError,UnicodeDecodeError,json.JSONDecodeError) as exc:
+            self.send_error(400,"JSON inválido.")
+        except Exception as exc:
+            print("[EDITOR] Erro ao salvar:",exc)
+            self.send_error(500,"Não foi possível salvar a configuração.")
+
     def websocket_loop(self):
         while True:
             opcode,payload=read_frame(self)

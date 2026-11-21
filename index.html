@@ -6334,5 +6334,33 @@ console.info('Oito Entradas v21.4: mapa vetorial, ordens explícitas, mochila do
 
 </script>
 
+
+<script>
+/* v22.4 — sincronização do editor com o servidor publicado */
+(function(){
+ 'use strict';
+ const KEY='oito-entradas-creator-config-v1';
+ let last='';
+ async function syncFromServer(){
+  try{
+   const r=await fetch('/api/editor-config',{cache:'no-store'});
+   if(!r.ok)return;
+   const payload=await r.json();
+   if(!payload||!payload.config||typeof payload.config!=='object'||!Object.keys(payload.config).length)return;
+   const raw=JSON.stringify(payload.config);
+   if(raw===last)return;
+   last=raw;
+   localStorage.setItem(KEY,raw);
+   if(typeof window.applyEditorConfig==='function')window.applyEditorConfig(payload.config);
+   else if(typeof applyEditorConfig==='function')applyEditorConfig(payload.config);
+   window.dispatchEvent(new CustomEvent('oito-editor-server-update',{detail:{config:payload.config}}));
+   console.info('[Oito Entradas] Configuração do editor sincronizada com o servidor.');
+  }catch(err){console.debug('[Oito Entradas] Sincronização indisponível:',err);}
+ }
+ syncFromServer();
+ window.setInterval(syncFromServer,5000);
+})();
+</script>
+
 </body>
 </html>
