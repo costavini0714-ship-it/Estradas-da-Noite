@@ -1,0 +1,30 @@
+OITO ENTRADAS — ISLA AURORA · v22.2
+
+ARQUIVOS
+- Oito_Entradas_v22.2.html: jogo principal.
+- Oito_Entradas_Editor_v22.2.html: editor compatível.
+- servidor_multiplayer_v14.5.py: servidor local/LAN, Render e WebSocket.
+- render.yaml e README_RENDER.md: publicação no Render.
+
+WINDOWS
+1. Extraia todos os arquivos para uma pasta nova.
+2. Execute INICIAR_JOGO.bat para jogar individualmente.
+3. Execute INICIAR_SERVIDOR_MULTIPLAYER.bat para abrir as salas locais.
+
+CONSTRUÇÃO
+1. Abra B · Construir.
+2. Escolha uma categoria e um projeto.
+3. O painel inferior mostra o custo e os materiais que faltam.
+4. Clique em CONSTRUIR NO MAPA. Se faltarem materiais, o botão informa o que falta sem esconder a ação.
+5. Clique em uma célula livre no abrigo. Paredes e pisos permanecem selecionados para traçar segmentos; Esc cancela.
+
+DESEMPENHO E COMBATE
+- O HUD deixa de reconstruir toda a interface em cada quadro; o Canvas continua renderizando normalmente.
+- Zumbis da fazenda perseguem o alvo vivo mais próximo, recalculam a distância depois do movimento e atacam ao entrar no alcance.
+- Dentro de cômodos, as ações são exibidas como E · ABRIR e E · ENTRAR.
+
+RENDER
+Envie todos os arquivos da pasta para a raiz do GitHub e crie um Blueprint usando render.yaml. Consulte README_RENDER.md. O Render hospeda o servidor, mas a renderização do jogo continua no navegador do jogador.
+
+TESTES
+A sintaxe JavaScript e Python pode ser validada localmente. Neste ambiente, a abertura do Chromium foi bloqueada por ERR_BLOCKED_BY_ADMINISTRATOR; portanto, não foi possível confirmar uma partida completa no navegador.

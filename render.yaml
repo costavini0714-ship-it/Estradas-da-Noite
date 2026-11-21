@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: oito-entradas
+    runtime: python
+    plan: free
+    buildCommand: pip install --no-input -r requirements.txt
+    startCommand: python servidor_multiplayer_v14.5.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
