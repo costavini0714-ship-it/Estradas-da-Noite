@@ -6364,7 +6364,7 @@ console.info('Oito Entradas v21.4: mapa vetorial, ordens explícitas, mochila do
 
 
 <style>
-/* Controles touch nativos do jogo */
+/* Controles touch: ocultos automaticamente enquanto uma interface bloqueia o jogo */
 #mobilePad{display:none;position:fixed;inset:0;z-index:80;pointer-events:none;touch-action:none;user-select:none;-webkit-user-select:none}
 @media (pointer:coarse),(max-width:800px){
  #mobilePad{display:block}
@@ -6374,11 +6374,10 @@ console.info('Oito Entradas v21.4: mapa vetorial, ordens explícitas, mochila do
  #mobileActions{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(25px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(2,minmax(62px,78px));gap:10px;pointer-events:auto}
  .mobileAction{min-height:62px;border:1px solid #a7c7bb;border-radius:50%;background:#10251fe8;color:#f1fff8;font:800 11px system-ui;box-shadow:0 5px 18px #0009;touch-action:none}
  .mobileAction:active,.mobileAction.active{background:#36745d;transform:scale(.96)}
- #mobileInteract{grid-column:2;grid-row:1}
- #mobileSprint{grid-column:1;grid-row:2}
- #mobileAttack{grid-column:2;grid-row:2;background:#40252be8;border-color:#c47c82}
+ #mobileInteract{grid-column:2;grid-row:1}#mobileSprint{grid-column:1;grid-row:2}#mobileAttack{grid-column:2;grid-row:2;background:#40252be8;border-color:#c47c82}
 }
 @media (pointer:fine) and (min-width:801px){#mobilePad{display:none!important}}
+#mobilePad.mobile-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <div id="mobilePad" aria-label="Controles para celular">
  <div id="mobileStickArea" aria-label="Analógico de movimento"><div id="mobileStickBase"></div><div id="mobileStickKnob"></div></div>
@@ -6389,39 +6388,70 @@ console.info('Oito Entradas v21.4: mapa vetorial, ordens explícitas, mochila do
  </div>
 </div>
 <script>
-(()=>{
- const pad=document.getElementById('mobilePad'), area=document.getElementById('mobileStickArea'), knob=document.getElementById('mobileStickKnob');
+(()=>{'use strict';
+ const pad=document.getElementById('mobilePad'),area=document.getElementById('mobileStickArea'),knob=document.getElementById('mobileStickKnob');
  if(!pad||!area||!knob)return;
  const coarse=()=>window.matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>0||innerWidth<=800;
- let stickId=null, sprintId=null, attackId=null, center=null;
- const releaseMove=()=>{['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].forEach(k=>{if(typeof keys!=='undefined')keys[k]=false;});knob.style.left='50%';knob.style.top='50%';};
- const move=(e)=>{
-  if(e.pointerId!==stickId||!center)return;
-  const dx=e.clientX-center.x,dy=e.clientY-center.y,limit=area.clientWidth*.34;
-  const dist=Math.hypot(dx,dy),scale=dist>limit?limit/dist:1,x=dx*scale,y=dy*scale;
-  knob.style.left='calc(50% + '+x+'px)';knob.style.top='calc(50% + '+y+'px)';
-  const nx=x/limit,ny=y/limit,dead=.22;
-  const horizontal=Math.abs(nx)<dead?0:nx,vertical=Math.abs(ny)<dead?0:ny;
-  if(typeof keys!=='undefined'){
-   keys.a=horizontal<0;keys.d=horizontal>0;keys.w=vertical<0;keys.s=vertical>0;
-   keys.arrowleft=keys.a;keys.arrowright=keys.d;keys.arrowup=keys.w;keys.arrowdown=keys.s;
+ const blockingIds=['startOverlay','pauseOverlay','endOverlay','gameMenuOverlay','puzzleOverlay','multiplayerOverlay','v191MapOverlay','editorOverlay','creatorOverlay','settingsOverlay'];
+ let stickId=null,center=null,activeKeys=new Set(),sprintId=null,attackId=null;
+ const isVisible=el=>{if(!el||el.hidden)return false;const cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden'||Number(cs.opacity)===0)return false;const r=el.getBoundingClientRect();return r.width>0&&r.height>0;};
+ function interfaceOpen(){
+  if(blockingIds.some(id=>isVisible(document.getElementById(id))))return true;
+  for(const el of document.querySelectorAll('.overlay,[role="dialog"],.modal-backdrop')){
+   if(el===pad||pad.contains(el))continue;
+   if(isVisible(el)){const r=el.getBoundingClientRect();if(r.width>innerWidth*.45&&r.height>innerHeight*.35)return true;}
   }
-  if(typeof netRole!=='undefined'&&netRole==='guest'&&typeof mpSendInputNow==='function')mpSendInputNow();
- };
- area.addEventListener('pointerdown',e=>{if(!coarse()||stickId!==null)return;e.preventDefault();stickId=e.pointerId;area.setPointerCapture?.(stickId);const r=area.getBoundingClientRect();center={x:r.left+r.width/2,y:r.top+r.height/2};move(e);});
+  return false;
+ }
+ function syncVisibility(){
+  const hide=!coarse()||interfaceOpen()||document.hidden;
+  pad.classList.toggle('mobile-hidden',hide);
+  if(hide)clearControls();
+ }
+ function keyEvent(key,type){try{window.dispatchEvent(new KeyboardEvent(type,{key,bubbles:true,cancelable:true}));}catch(_){}}
+ function setKeys(next){
+  for(const k of activeKeys)if(!next.has(k))keyEvent(k,'keyup');
+  for(const k of next)if(!activeKeys.has(k))keyEvent(k,'keydown');
+  activeKeys=next;
+ }
+ function clearControls(){
+  if(activeKeys.size)setKeys(new Set());
+  if(sprintId!==null){sprintId=null;keyEvent('Shift','keyup');}
+  if(attackId!==null){attackId=null;const b=document.getElementById('mobileAttack');b?.classList.remove('active');}
+  stickId=null;center=null;knob.style.left='50%';knob.style.top='50%';
+  document.querySelectorAll('.mobileAction').forEach(b=>b.classList.remove('active'));
+ }
+ function move(e){
+  if(e.pointerId!==stickId||!center)return;
+  const dx=e.clientX-center.x,dy=e.clientY-center.y,limit=area.clientWidth*.34,dist=Math.hypot(dx,dy),scale=dist>limit?limit/dist:1,x=dx*scale,y=dy*scale;
+  knob.style.left='calc(50% + '+x+'px)';knob.style.top='calc(50% + '+y+'px)';
+  const nx=x/limit,ny=y/limit,dead=.2,next=new Set();
+  if(nx< -dead)next.add('a');if(nx>dead)next.add('d');if(ny< -dead)next.add('w');if(ny>dead)next.add('s');
+  if(interfaceOpen()){clearControls();syncVisibility();return;}
+  setKeys(next);
+ }
+ area.addEventListener('pointerdown',e=>{
+  if(!coarse()||interfaceOpen()||stickId!==null)return;
+  e.preventDefault();stickId=e.pointerId;try{area.setPointerCapture(stickId);}catch(_){}
+  const r=area.getBoundingClientRect();center={x:r.left+r.width/2,y:r.top+r.height/2};move(e);
+ });
  area.addEventListener('pointermove',e=>{if(stickId!==null){e.preventDefault();move(e);}});
- const endStick=e=>{if(stickId!==e.pointerId)return;stickId=null;center=null;releaseMove();if(typeof netRole!=='undefined'&&netRole==='guest'&&typeof mpSendInputNow==='function')mpSendInputNow();};
- area.addEventListener('pointerup',endStick);area.addEventListener('pointercancel',endStick);area.addEventListener('lostpointercapture',()=>{if(stickId!==null){stickId=null;center=null;releaseMove();}});
- const bindHold=(id,key,assign)=>{const b=document.getElementById(id);if(!b)return;b.addEventListener('pointerdown',e=>{if(!coarse())return;e.preventDefault();b.setPointerCapture?.(e.pointerId);assign(true);b.classList.add('active');});const end=e=>{assign(false);b.classList.remove('active');};b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('lostpointercapture',end);};
- bindHold('mobileSprint','shift',v=>{if(typeof keys!=='undefined')keys.shift=v;});
- bindHold('mobileAttack','attack',v=>{if(typeof pointer!=='undefined')pointer.down=v;});
- const interact=document.getElementById('mobileInteract');
- interact?.addEventListener('pointerdown',e=>{if(!coarse())return;e.preventDefault();interact.classList.add('active');if(typeof netRole!=='undefined'&&netRole==='guest'&&typeof mpSendAction==='function')mpSendAction('interact');else if(typeof interactNearest==='function')interactNearest();});
- const clear=()=>{releaseMove();if(typeof keys!=='undefined')keys.shift=false;if(typeof pointer!=='undefined')pointer.down=false;document.querySelectorAll('.mobileAction').forEach(b=>b.classList.remove('active'));};
- window.addEventListener('blur',clear);document.addEventListener('visibilitychange',()=>{if(document.hidden)clear();});
- window.addEventListener('contextmenu',e=>{if(coarse())e.preventDefault();});
-})();
+ const endStick=e=>{if(stickId!==e.pointerId)return;clearControls();};
+ area.addEventListener('pointerup',endStick);area.addEventListener('pointercancel',endStick);area.addEventListener('lostpointercapture',()=>{if(stickId!==null)clearControls();});
+ const sprint=document.getElementById('mobileSprint');
+ sprint?.addEventListener('pointerdown',e=>{if(!coarse()||interfaceOpen())return;e.preventDefault();sprintId=e.pointerId;keyEvent('Shift','keydown');sprint.classList.add('active');});
+ const endSprint=e=>{if(sprintId===null||e.pointerId!==sprintId)return;sprintId=null;keyEvent('Shift','keyup');sprint.classList.remove('active');};
+ sprint?.addEventListener('pointerup',endSprint);sprint?.addEventListener('pointercancel',endSprint);sprint?.addEventListener('lostpointercapture',endSprint);
+ const attack=document.getElementById('mobileAttack');
+ attack?.addEventListener('pointerdown',e=>{if(!coarse()||interfaceOpen())return;e.preventDefault();attackId=e.pointerId;attack.classList.add('active');const c=document.getElementById('game');if(c){const r=c.getBoundingClientRect();const ev=new PointerEvent('pointerdown',{bubbles:true,button:2,clientX:r.left+r.width*.75,clientY:r.top+r.height*.5});c.dispatchEvent(ev);}});
+ const endAttack=e=>{if(attackId===null||e.pointerId!==attackId)return;attackId=null;window.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:2}));attack?.classList.remove('active');};
+ attack?.addEventListener('pointerup',endAttack);attack?.addEventListener('pointercancel',endAttack);attack?.addEventListener('lostpointercapture',endAttack);
+ document.getElementById('mobileInteract')?.addEventListener('pointerdown',e=>{if(!coarse()||interfaceOpen())return;e.preventDefault();keyEvent('e','keydown');keyEvent('e','keyup');});
+ const observer=new MutationObserver(syncVisibility);
+ observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','style','class','aria-hidden']});
+ window.addEventListener('resize',syncVisibility);window.addEventListener('orientationchange',syncVisibility);window.addEventListener('blur',clearControls);document.addEventListener('visibilitychange',syncVisibility);
+ syncVisibility();
+})(); 
 </script>
-
 </body>
 </html>
