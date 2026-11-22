@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORT", "8765"))
 HOST = os.environ.get("HOST", "0.0.0.0")
 MAX_PLAYERS = 4
-ALLOWED_CLASSES = {"survivor", "soldier", "medic", "rescuer", "explorer", "scout", "engineer", "carpenter", "mechanic", "farmer", "hunter", "watchman", "cook", "scientist", "leader"}
+ALLOWED_CLASSES = {"survivor", "soldier", "medic", "rescuer", "explorer", "scout", "engineer", "carpenter", "mechanic", "farmer", "hunter", "watchman", "cook", "scientist", "locksmith", "mason", "citizen", "cartographer", "navigator", "commander", "mayor", "tourist", "hybrid", "hybrid_vampire", "hybrid_werewolf"}
 CODES = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 ROOMS = {}
 LOCK = threading.RLock()
@@ -207,7 +207,11 @@ class Handler(SimpleHTTPRequestHandler):
                 room=ROOMS.get(code)
                 if not room: raise RoomError("Sala não encontrada. Confira o código.")
                 if len(room["players"])>=MAX_PLAYERS: raise RoomError("Esta sala já tem quatro jogadores.")
-                pid=secrets.token_hex(8); self.peer_id=pid; self.room_code=code; self.name=safe_name(msg.get("name")); self.class_id=safe_class_id(msg.get("classId"))
+                selected=safe_class_id(msg.get("classId"))
+                if selected in {"commander", "mayor"} and any(p.get("class_id")==selected for p in room["players"].values()):
+                    label="Comandante" if selected=="commander" else "Prefeito"
+                    raise RoomError("Esta sala já tem um "+label+". Só pode haver um por equipe.")
+                pid=secrets.token_hex(8); self.peer_id=pid; self.room_code=code; self.name=safe_name(msg.get("name")); self.class_id=selected
                 room["players"][pid]={"id":pid,"name":self.name,"class_id":self.class_id,"conn":self}
                 people=player_list(room); last_state=room.get("last_state"); started=room["started"]
             send_json(self,{"type":"ROOM","code":code,"selfId":pid,"role":"guest","players":people})
@@ -251,6 +255,9 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             if kind=="CLASS_SELECT":
                 selected=safe_class_id(msg.get("classId"))
+                if selected in {"commander", "mayor"} and any(pid!=self.peer_id and p.get("class_id")==selected for pid,p in room["players"].items()):
+                    label="Comandante" if selected=="commander" else "Prefeito"
+                    raise RoomError("Esta sala já tem um "+label+". Só pode haver um por equipe.")
                 room["players"][self.peer_id]["class_id"]=selected
                 self.class_id=selected
                 if room.get("started") and isinstance(room.get("last_state"), dict):
