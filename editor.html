@@ -314,6 +314,28 @@
   <div><h2>Estúdio universal do Oito Entradas</h2><p class="hint">Crie e edite elementos visuais de todas as áreas do jogo. Cada elemento tem desenho em pixels, propriedades e posição. Salve para gravar tudo junto da configuração já existente.</p></div>
   <div class="row"><button class="btn" id="studioSave">Salvar e sincronizar</button><button class="btn alt" id="studioExport">Exportar biblioteca</button></div>
  </div>
+ 
+ <section class="card" id="v23UniversalRig" style="margin:12px 0;padding:14px;border:1px solid #6c927f;background:linear-gradient(145deg,#142a30,#101b24)">
+  <div class="section-title"><h3>3 · Manequim universal de animação e itens</h3><span class="pill">Por classe e por pose</span></div>
+  <p class="hint">Selecione uma arma já importada, escolha a classe e ajuste como o personagem a segura. Cada classe guarda suas próprias posições para parado, andando e atacando. Depois clique em “Salvar e sincronizar” no topo do Estúdio.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:10px 0">
+   <label class="field">Classe<select id="v23RigClass" class="studio-select"><option value="survivor">Sobrevivente</option></select></label>
+   <label class="field">Pose<select id="v23RigPose" class="studio-select"><option value="idle">Parado</option><option value="walk">Andando</option><option value="attack">Atacando</option></select></label>
+   <label class="field">Arma / item equipado<select id="v23RigWeapon" class="studio-select"><option value="">Importe as armas primeiro</option></select></label>
+   <div style="display:flex;align-items:end"><button type="button" class="btn alt" id="v23RigRefresh" style="width:100%">Atualizar biblioteca</button></div>
+  </div>
+  <div style="display:grid;grid-template-columns:minmax(220px,1fr) minmax(230px,1fr);gap:12px;align-items:center">
+   <div style="background:#09151d;border:1px solid #3b5961;border-radius:10px;overflow:hidden"><canvas id="v23RigCanvas" width="720" height="420" style="display:block;width:100%;height:auto;image-rendering:pixelated"></canvas></div>
+   <div style="display:grid;gap:10px">
+    <label class="field">Posição horizontal (X): <b id="v23RigXValue">13</b><input id="v23RigX" type="range" min="-36" max="36" step="1" value="13"></label>
+    <label class="field">Posição vertical (Y): <b id="v23RigYValue">-10</b><input id="v23RigY" type="range" min="-36" max="36" step="1" value="-10"></label>
+    <label class="field">Ângulo: <b id="v23RigAngleValue">0°</b><input id="v23RigAngle" type="range" min="-180" max="180" step="1" value="0"></label>
+    <label class="field">Escala: <b id="v23RigScaleValue">0.75×</b><input id="v23RigScale" type="range" min="0.35" max="2.5" step="0.05" value="0.75"></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn alt" id="v23RigAuto">Ajuste automático sugerido</button><button type="button" class="btn alt" id="v23RigReset">Restaurar posição</button></div>
+    <div class="helpbox" id="v23RigStatus">Importe as armas e selecione uma para começar. O ajuste fica separado por classe e pose.</div>
+   </div>
+  </div>
+ </section>
  <div class="studio-layout">
   <aside class="card studio-left">
    <h3>1 · Área do jogo</h3>
@@ -813,6 +835,56 @@ v20ImportChange?.addEventListener('change',()=>{setTimeout(()=>{config.v20World=
  $('studioSave').addEventListener('click',async()=>{studio=ensureStudio();try{syncLinkedAssets();const payload=JSON.stringify(config);if(payload.length>1850000)throw new Error('A configuração ficou grande demais para enviar de uma vez (limite seguro de 1,85 MB). Reduza a quantidade ou a resolução dos desenhos e tente novamente.');localStorage.setItem('oito-entradas-creator-config-v1',payload);const ok=await persistConfig(false);$('studioStatus').textContent=ok?'Biblioteca salva. A sincronização com o servidor foi solicitada.':'Salvo localmente; verifique a conexão/token do servidor.';}catch(e){$('studioStatus').textContent='Erro ao salvar: '+e.message;}});
  $('studioExport').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({universalStudio:ensureStudio()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='oito-entradas-estudio-universal.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
  const priorSetView=setView;setView=function(name){priorSetView(name);if(name==='studio'){studio=ensureStudio();renderAll();}};
+ 
+ // v23.0 — Manequim universal: offsets independentes para cada classe, pose e arma.
+ const V23_RIG_CLASSES=[
+  ['survivor','Sobrevivente'],['soldier','Soldado'],['medic','Médico'],['rescuer','Socorrista'],['explorer','Explorador'],['scout','Batedor'],['engineer','Engenheiro'],['carpenter','Carpinteiro'],['mechanic','Mecânico'],['farmer','Agricultor'],['hunter','Caçador'],['watchman','Segurança'],['cook','Cozinheiro'],['scientist','Cientista'],['locksmith','Chaveiro'],['mason','Pedreiro'],['citizen','Cidadão'],['cartographer','Cartógrafo'],['navigator','Navegador'],['commander','Comandante'],['mayor','Prefeito'],['tourist','Turista'],['hybrid','Híbrido'],['hybrid_vampire','Híbrido Vampiro'],['hybrid_werewolf','Híbrido Lobisomem']
+ ];
+ const v23RigCanvas=$('v23RigCanvas'),v23RigCtx=v23RigCanvas.getContext('2d'),v23RigImageCache=new Map();
+ function v23RigEnsure(){config.universalRig=config.universalRig||{};config.universalRig.classOffsets=config.universalRig.classOffsets||{};const id=$('v23RigClass').value,pose=$('v23RigPose').value;config.universalRig.classOffsets[id]=config.universalRig.classOffsets[id]||{};config.universalRig.classOffsets[id][pose]=config.universalRig.classOffsets[id][pose]||{x:13,y:-10,angle:0,scale:.75};return config.universalRig.classOffsets[id][pose];}
+ function v23RigAssets(){return studio.assets.filter(a=>a.source?.kind==='weapon'||a.source?.kind==='customItem'||a.source?.kind==='lootItem');}
+ function v23RigPopulateWeapons(){const sel=$('v23RigWeapon'),old=sel.value;sel.innerHTML='';for(const a of v23RigAssets()){const op=document.createElement('option');op.value=a.source.kind+'::'+a.source.id;op.textContent=a.name+' · '+(a.source.kind==='weapon'?'arma': 'item');sel.append(op);}if([...sel.options].some(o=>o.value===old))sel.value=old;if(!sel.value&&sel.options.length)sel.selectedIndex=0;if(!sel.options.length){const op=document.createElement('option');op.value='';op.textContent='Importe os elementos primeiro';sel.append(op);}v23RigDraw();}
+ function v23RigAsset(){const val=$('v23RigWeapon').value;return v23RigAssets().find(a=>a.source.kind+'::'+a.source.id===val)||null;}
+ function v23RigOffset(){return v23RigEnsure();}
+ function v23RigWriteControls(){const v=v23RigOffset();for(const [id,key] of [['v23RigX','x'],['v23RigY','y'],['v23RigAngle','angle'],['v23RigScale','scale']])$(id).value=String(v[key]);$('v23RigXValue').textContent=v.x;$('v23RigYValue').textContent=v.y;$('v23RigAngleValue').textContent=v.angle+'°';$('v23RigScaleValue').textContent=Number(v.scale).toFixed(2)+'×';}
+ function v23RigImage(url){if(!url)return null;let img=v23RigImageCache.get(url);if(!img){img=new Image();img.onload=v23RigDraw;img.src=url;v23RigImageCache.set(url,img);}return img;}
+ function v23RigDraw(){
+  const c=v23RigCanvas,x=v23RigCtx;if(!c||!x)return;const W=c.width,H=c.height;x.clearRect(0,0,W,H);x.fillStyle='#0a1820';x.fillRect(0,0,W,H);
+  x.strokeStyle='#ffffff12';x.lineWidth=1;for(let i=0;i<=W;i+=24){x.beginPath();x.moveTo(i,0);x.lineTo(i,H);x.stroke();}for(let j=0;j<=H;j+=24){x.beginPath();x.moveTo(0,j);x.lineTo(W,j);x.stroke();}
+  const cx=330,cy=205;x.save();x.translate(cx,cy);
+  // Silhueta de referência com braço e mão na posição de empunhadura.
+  x.fillStyle='#253e49';x.strokeStyle='#9ab7b4';x.lineWidth=5;
+  x.beginPath();x.arc(0,-94,36,0,Math.PI*2);x.fill();x.stroke();
+  x.fillStyle='#668a83';x.beginPath();x.roundRect(-48,-54,96,125,22);x.fill();x.stroke();
+  x.strokeStyle='#d7b68b';x.lineWidth=17;x.lineCap='round';x.beginPath();x.moveTo(34,-34);x.lineTo(67,-4);x.lineTo(73,4);x.stroke();
+  x.strokeStyle='#526b72';x.lineWidth=21;x.beginPath();x.moveTo(-20,66);x.lineTo(-28,154);x.moveTo(20,66);x.lineTo(30,154);x.stroke();
+  x.strokeStyle='#b8c8c2';x.lineWidth=3;x.beginPath();x.moveTo(0,-175);x.lineTo(0,175);x.moveTo(-155,0);x.lineTo(155,0);x.stroke();
+  const v=v23RigOffset(),px=Number(v.x||0),py=Number(v.y||0),scale=Number(v.scale)||.75,angle=(Number(v.angle)||0)*Math.PI/180;
+  x.save();x.translate(73+px*2.4,4+py*2.4);x.rotate(angle);x.imageSmoothingEnabled=false;
+  const a=v23RigAsset();
+  if(a){
+   let drawn=false;for(let yy=0;yy<(a.pixels||[]).length;yy++)for(let xx=0;xx<(a.pixels[yy]||[]).length;xx++){const col=a.pixels[yy][xx];if(col){x.fillStyle=col;x.fillRect((xx-16)*2.4*scale,(yy-16)*2.4*scale,2.5*scale,2.5*scale);drawn=true;}}
+   const nativeUrl=config.weaponOverrides?.[a.source.id]?.iconImage||config.itemOverrides?.[a.source.id]?.iconImage||'';if(!drawn&&nativeUrl){const img=v23RigImage(nativeUrl);if(img?.complete&&img.naturalWidth)x.drawImage(img,-38*scale,-38*scale,76*scale,76*scale);else{x.fillStyle='#f1d28c';x.font='28px system-ui';x.fillText(a.text||'⚙',-13,10);}}
+  } else {x.fillStyle='#f1d28c';x.font='28px system-ui';x.fillText('⚙',-13,10);}
+  x.restore();x.restore();
+  x.fillStyle='#e7f0e9';x.font='bold 16px system-ui';x.fillText(($('v23RigClass').selectedOptions[0]?.textContent||'Classe')+' · '+($('v23RigPose').selectedOptions[0]?.textContent||'Pose'),18,28);
+  const pose=$('v23RigPose').value,weapon=v23RigAsset();x.fillStyle='#b6cbc6';x.font='12px system-ui';x.fillText((weapon?.name||'Nenhum item')+' · ajustes exclusivos desta classe/pose',18,H-18);
+  v23RigWriteControls();
+ }
+ function v23RigSave(){v23RigDraw();$('v23RigStatus').textContent='Posição guardada nesta configuração. Clique em “Salvar e sincronizar” no topo para enviar ao jogo.';}
+ function v23RigPreset(){const id=$('v23RigClass').value,pose=$('v23RigPose').value,presets={soldier:{x:15,y:-11,angle:-5,scale:.8},medic:{x:12,y:-8,angle:-8,scale:.7},rescuer:{x:14,y:-9,angle:-8,scale:.72},explorer:{x:15,y:-10,angle:0,scale:.74},scout:{x:15,y:-11,angle:-4,scale:.8},engineer:{x:14,y:-7,angle:0,scale:.78},carpenter:{x:14,y:-8,angle:0,scale:.8},mechanic:{x:14,y:-9,angle:-4,scale:.8},farmer:{x:14,y:-8,angle:0,scale:.8},hunter:{x:18,y:-13,angle:-8,scale:.86},watchman:{x:15,y:-10,angle:0,scale:.8},cook:{x:12,y:-7,angle:0,scale:.72},scientist:{x:12,y:-8,angle:-5,scale:.68},locksmith:{x:12,y:-8,angle:0,scale:.66},mason:{x:15,y:-8,angle:0,scale:.8}};const v=v23RigOffset(),p=presets[id]||{x:13,y:-10,angle:0,scale:.75};Object.assign(v,p);if(pose==='walk'){v.x+=1;v.angle+=4;}if(pose==='attack'){v.x+=3;v.angle-=12;}v23RigSave();}
+ $('v23RigClass').innerHTML=V23_RIG_CLASSES.map(v=>'<option value="'+v[0]+'">'+v[1]+'</option>').join('');
+ $('v23RigClass').addEventListener('change',()=>{v23RigWriteControls();v23RigDraw();});
+ $('v23RigPose').addEventListener('change',()=>{v23RigWriteControls();v23RigDraw();});
+ $('v23RigWeapon').addEventListener('change',v23RigDraw);
+ $('v23RigRefresh').addEventListener('click',async()=>{try{await importExistingAssets();v23RigPopulateWeapons();$('v23RigStatus').textContent='Biblioteca atualizada. Selecione a arma para ajustar a empunhadura.';}catch(err){$('v23RigStatus').textContent='Não foi possível importar: '+err.message;}});
+ $('v23RigAuto').addEventListener('click',v23RigPreset);
+ $('v23RigReset').addEventListener('click',()=>{config.universalRig?.classOffsets?.[$('v23RigClass').value]&&delete config.universalRig.classOffsets[$('v23RigClass').value][$('v23RigPose').value];v23RigWriteControls();v23RigDraw();v23RigSave();});
+ for(const id of ['v23RigX','v23RigY','v23RigAngle','v23RigScale'])$(id).addEventListener('input',()=>{const v=v23RigOffset(),key={v23RigX:'x',v23RigY:'y',v23RigAngle:'angle',v23RigScale:'scale'}[id];v[key]=Number($(id).value);v23RigSave();});
+ $('studioPixelCanvas').addEventListener('pointerup',()=>v23RigDraw());
+ $('studioImportExisting').addEventListener('click',()=>{setTimeout(v23RigPopulateWeapons,150);});
+ v23RigPopulateWeapons();
+
  if(studio.assets.length)activeId=studio.assets[0].id;
  renderAll();
  console.info('[Oito Entradas] Estúdio Universal v22.6.4 — arte compartilhável entre classes e edição pixel a pixel.');
