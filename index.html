@@ -186,7 +186,7 @@ body{min-height:0;overscroll-behavior:none}
 <div class="app">
   <header class="header">
     <div class="brand"><h1>OITO <span>ENTRADAS</span></h1><p>O AMULETO · Sobreviva, construa, proteja e atravesse o mapa.</p></div>
-    <div class="actions"><div class="day-clock" id="dayClock" aria-live="polite"><span class="clock-icon" id="dayClockIcon">☀</span><span><span class="clock-label" id="dayClockLabel">DIA</span><strong id="dayClockTime">01:30</strong><small id="dayClockHint">até o anoitecer</small></span></div><button class="btn alt" id="allySupportBtn" title="Gerenciar sobreviventes, armas e construções">👥 Sobreviventes</button><button class="btn alt" id="mpRoomBadge" title="Ver sala e código de convite" hidden>Sala</button><button class="btn alt" data-open-menu="build" title="Construir (B)">B · Construir</button><button class="btn alt" data-open-menu="inventory" title="Mochila (I)">I · Mochila</button><button class="btn alt" data-open-menu="upgrades" title="Melhorias (U)">U · Melhorias</button><button class="btn alt" data-open-menu="vehicles" title="Garagem (V)">V · Garagem</button><button class="btn alt explore-mini" id="exploreBtn" title="Explorar arredores (M)">🌲 Explorar</button><button class="btn alt guide-mini" id="guideBtn" title="Guia (H)">?</button><a class="btn alt editor-link" href="Oito_Entradas_Editor_v22.2.html" target="_blank" rel="noopener" style="text-decoration:none">Editor</a><button class="btn alt save-mini" id="saveBtn" title="Salvar partida">Salvar</button><button class="btn alt load-mini" id="loadBtn" title="Carregar partida">Carregar</button><button class="btn alt pause-mini" id="pauseBtn">Pausar</button></div>
+    <div class="actions"><div class="day-clock" id="dayClock" aria-live="polite"><span class="clock-icon" id="dayClockIcon">☀</span><span><span class="clock-label" id="dayClockLabel">DIA</span><strong id="dayClockTime">01:30</strong><small id="dayClockHint">até o anoitecer</small></span></div><button class="btn alt" id="allySupportBtn" title="Gerenciar sobreviventes, armas e construções">👥 Sobreviventes</button><button class="btn alt" id="mpRoomBadge" title="Ver sala e código de convite" hidden>Sala</button><button class="btn alt" data-open-menu="build" title="Construir (B)">B · Construir</button><button class="btn alt" data-open-menu="inventory" title="Mochila (I)">I · Mochila</button><button class="btn alt" data-open-menu="upgrades" title="Melhorias (U)">U · Melhorias</button><button class="btn alt" data-open-menu="vehicles" title="Garagem (V)">V · Garagem</button><button class="btn alt explore-mini" id="exploreBtn" title="Explorar arredores (M)">🌲 Explorar</button><button class="btn alt guide-mini" id="guideBtn" title="Guia (H)">?</button><a class="btn alt editor-link" href="/editor" target="_blank" rel="noopener" style="text-decoration:none">Editor</a><button class="btn alt save-mini" id="saveBtn" title="Salvar partida">Salvar</button><button class="btn alt load-mini" id="loadBtn" title="Carregar partida">Carregar</button><button class="btn alt pause-mini" id="pauseBtn">Pausar</button></div>
   </header>
   <section class="hud" aria-label="Status da partida">
     <div class="stat"><div class="label">Jogador</div><div class="value" id="playerHpText">100 / 100</div><div class="meter"><i id="playerHpBar"></i></div></div>
@@ -4109,13 +4109,27 @@ try{v18EnsureCycle();updateUI();}catch(err){console.error('Inicialização da re
   {id:'mechanic',name:'Mecânico',icon:'🔧',price:250,desc:'Recupera peças e componentes de equipamentos abandonados.',bonus:'+1 sucata por saque de sucata e +1 componente por saque de componentes.'},
   {id:'farmer',name:'Agricultor',icon:'🌱',price:190,desc:'Sabe reconhecer e aproveitar alimentos encontrados.',bonus:'+25% de comida obtida em saques.'},
   {id:'hunter',name:'Caçador',icon:'🐾',price:300,desc:'Sabe observar ameaças e reagir rapidamente.',bonus:'Punhos causam +10% de dano e ataque recarrega 8% mais rápido.'},
-  {id:'watchman',name:'Vigia',icon:'🔦',price:230,desc:'Treinado para manter a calma e proteger o grupo durante a noite.',bonus:'Recebe 18% menos dano durante a noite.'},
+  {id:'watchman',name:'Segurança',icon:'🛡️',price:230,desc:'Treinado para proteger o grupo e manter a área segura durante a noite.',bonus:'Recebe 18% menos dano durante a noite.',iconImage:''},
   {id:'cook',name:'Cozinheiro',icon:'🍲',price:170,desc:'Prepara refeições que aproveitam melhor os alimentos.',bonus:'Cada porção recupera 35% mais fome.'},
   {id:'scientist',name:'Cientista',icon:'📚',price:380,desc:'Analisa mecanismos e encontra soluções para fechaduras.',bonus:'Puzzles exigem uma rodada a menos e têm janela mais fácil.'},
   {id:'leader',name:'Líder',icon:'⭐',price:450,desc:'Organiza o grupo e melhora a cooperação.',bonus:'Aliados recebem +8% de velocidade e vida.'}
  ];
  // v22.3: classes are editable in the companion editor without replacing the class system.
- try{const cfg=JSON.parse(localStorage.getItem('oito-entradas-creator-config-v1')||'{}');for(const c of V19_CLASSES){const e=cfg.v223?.classes?.[c.id];if(e){c.name=String(e.name??c.name).slice(0,32);c.icon=String(e.icon??c.icon).slice(0,8);c.price=Math.max(0,Math.min(999999,Math.round(Number(e.price??c.price)||0)));c.desc=String(e.desc??c.desc).slice(0,180);c.bonus=String(e.bonus??c.bonus).slice(0,180);}}}catch(e){console.warn('Configuração V22.3 das classes inválida:',e);} 
+ function applyV223ClassOverrides(cfg){
+  for(const c of V19_CLASSES){
+   const e=cfg?.v223?.classes?.[c.id];if(!e)continue;
+   let savedName=String(e.name??c.name).slice(0,32);
+   if(c.id==='watchman'&&savedName==='Vigia')savedName='Segurança';
+   c.name=savedName;
+   c.icon=String(e.icon??c.icon).slice(0,8);
+   if(c.id==='watchman'&&c.icon==='🔦')c.icon='🛡️';
+   c.iconImage=typeof e.iconImage==='string'&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(e.iconImage)?e.iconImage:'';
+   c.price=Math.max(0,Math.min(999999,Math.round(Number(e.price??c.price)||0)));
+   c.desc=String(e.desc??c.desc).slice(0,180);
+   c.bonus=String(e.bonus??c.bonus).slice(0,180);
+  }
+ }
+ try{const cfg=JSON.parse(localStorage.getItem('oito-entradas-creator-config-v1')||'{}');applyV223ClassOverrides(cfg);}catch(e){console.warn('Configuração V22.3 das classes inválida:',e);} 
 
  function readProfile(){try{const d=JSON.parse(localStorage.getItem(V19_PROFILE_KEY)||'{}');return {coins:Math.max(0,Number(d.coins??0)||0),owned:Array.isArray(d.owned)?Array.from(new Set(['survivor',...d.owned.filter(id=>V19_CLASSES.some(c=>c.id===id))])):['survivor'],selected:V19_CLASSES.some(c=>c.id===d.selected&&((d.owned||[]).includes(d.selected)||d.selected==='survivor'))?d.selected:'survivor'};}catch(_){return {coins:0,owned:['survivor'],selected:'survivor'};}}
  let profile=readProfile();
@@ -4134,7 +4148,7 @@ try{v18EnsureCycle();updateUI();}catch(err){console.error('Inicialização da re
  #v19ClassGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:245px;overflow:auto;padding-right:3px}
  .v19-class-card{border:1px solid #425b63;border-radius:9px;padding:8px;background:#14232b;color:#eaf1ee;display:flex;gap:8px;align-items:flex-start;text-align:left;min-width:0}
  .v19-class-card.selected{border-color:#e4c57f;background:#2b302b;box-shadow:0 0 0 1px #e4c57f55}
- .v19-class-card:disabled{opacity:.55;cursor:not-allowed}.v19-class-card .v19-ico{font-size:23px;flex:0 0 25px}.v19-class-card b{display:block;font-size:12px}.v19-class-card small{display:block;font-size:10px;line-height:1.35;color:#b5c6c5;margin-top:2px}.v19-class-card em{display:block;font-style:normal;font-size:10px;color:#e6c980;margin-top:4px;font-weight:800}
+ .v19-class-card:disabled{opacity:.55;cursor:not-allowed}.v19-class-card .v19-ico{font-size:23px;flex:0 0 25px}.v19-class-card .v19-ico img{display:block;width:42px;height:42px;object-fit:contain;image-rendering:pixelated}.v19-class-card b{display:block;font-size:12px}.v19-class-card small{display:block;font-size:10px;line-height:1.35;color:#b5c6c5;margin-top:2px}.v19-class-card em{display:block;font-style:normal;font-size:10px;color:#e6c980;margin-top:4px;font-weight:800}
  #v19ClassShop .v19-foot{font-size:10px;color:#a9bcbd;margin:8px 0 0}
  #v19MapBtn{border-color:#7c8f8a!important;color:#e9dfc6!important}
  .v19-room-class{margin-left:auto;color:#e5d39f;font-size:10px;white-space:nowrap}
@@ -4153,7 +4167,8 @@ try{v18EnsureCycle();updateUI();}catch(err){console.error('Inicialização da re
   const shop=document.createElement('section');shop.id='v19ClassShop';shop.innerHTML='<div class="v19-shop-head"><h3>Escolha sua classe</h3><span class="v19-coins" id="v19CoinBalance">🪙 0 moedas</span></div><div id="v19ClassGrid"></div><p class="v19-foot">A loja de classes aparece somente no menu. Sobrevivente é grátis; as outras classes são desbloqueadas com moedas conquistadas durante as partidas.</p>';
   const startBtn=document.getElementById('startBtn');startModal.insertBefore(shop,startBtn||null);
  }
- function renderClassMenu(){const grid=document.getElementById('v19ClassGrid'),bal=document.getElementById('v19CoinBalance');if(!grid)return;if(bal)bal.textContent=`🪙 ${profile.coins} moedas`;grid.innerHTML='';for(const c of V19_CLASSES){const owned=isOwned(c.id),chosen=profile.selected===c.id,b=document.createElement('button');b.type='button';b.className='v19-class-card'+(chosen?' selected':'');b.disabled=!owned&&profile.coins<c.price;b.innerHTML=`<span class="v19-ico">${c.icon}</span><span><b>${esc(c.name)} ${chosen?'· selecionada':''}</b><small>${esc(c.desc)}</small><em>${owned?(chosen?'CLASSE ATIVA':'Desbloqueada · selecionar'):`🪙 ${c.price} moedas · ${esc(c.bonus)}`}</em></span>`;b.addEventListener('click',()=>{if(!owned){if(profile.coins<c.price){say('Moedas insuficientes.');return;}profile.coins-=c.price;profile.owned.push(c.id);}profile.selected=c.id;saveProfile();if(mpRoomCode&&typeof mpSend==='function')mpSend({type:'CLASS_SELECT',classId:c.id});renderClassMenu();say(`${c.name} selecionada para a próxima partida.`);});grid.append(b);}}
+ function renderClassMenu(){const grid=document.getElementById('v19ClassGrid'),bal=document.getElementById('v19CoinBalance');if(!grid)return;if(bal)bal.textContent=`🪙 ${profile.coins} moedas`;grid.innerHTML='';for(const c of V19_CLASSES){const owned=isOwned(c.id),chosen=profile.selected===c.id,b=document.createElement('button');b.type='button';b.className='v19-class-card'+(chosen?' selected':'');b.disabled=!owned&&profile.coins<c.price;const iconVisual=typeof c.iconImage==='string'&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(c.iconImage)?`<img src="${c.iconImage}" alt="">`:esc(c.icon);b.innerHTML=`<span class="v19-ico">${iconVisual}</span><span><b>${esc(c.name)} ${chosen?'· selecionada':''}</b><small>${esc(c.desc)}</small><em>${owned?(chosen?'CLASSE ATIVA':'Desbloqueada · selecionar'):`🪙 ${c.price} moedas · ${esc(c.bonus)}`}</em></span>`;b.addEventListener('click',()=>{if(!owned){if(profile.coins<c.price){say('Moedas insuficientes.');return;}profile.coins-=c.price;profile.owned.push(c.id);}profile.selected=c.id;saveProfile();if(mpRoomCode&&typeof mpSend==='function')mpSend({type:'CLASS_SELECT',classId:c.id});renderClassMenu();say(`${c.name} selecionada para a próxima partida.`);});grid.append(b);}}
+ window.addEventListener('oito-editor-server-update',ev=>{applyV223ClassOverrides(ev.detail?.config||{});renderClassMenu();});
  renderClassMenu();
 
  // --- Mapa inicial recebido pelo jogador; desenho esquemático provisório ---
