@@ -124,7 +124,7 @@
   else if(id==='hunter'){p.v23CamouflageUntil=Date.now()+12000;p.huntingMode=true;setCooldown(55000);notify('Camuflagem ativada. Modo de caça ligado.');}
   else if(id==='locksmith'){const near=bridge.getFn('findNearbyObject')?.(),door=near?.kind==='building'?near.obj:null;if(!door){notify('Aproxime-se de uma porta trancada.');return false;}door.locked=false;door.lockUnlocked=true;door.doorOpen=true;setCooldown(45000);notify('Fechadura destrancada.');}
   else if(id==='engineer'){for(const b of s.builds||[])b.hp=Math.min(b.maxHp||200,(b.hp||0)+45);if(s.case)s.case.hp=Math.min(s.case.maxHp||100,s.case.hp+25);setCooldown(55000);notify('Reparação de campo concluída.');}
-  else if(id==='mechanic'){for(const b of s.builds||[])if((b.hp||0)<(b.maxHp||0))b.hp=Math.min(b.maxHp||100,b.hp+80);setCooldown(55000);notify('Solda e reparo concluídos.');}
+  else if(id==='mechanic'){for(const b of s.builds||[])if((b.hp||0)<(b.maxHp||0))b.hp=Math.min(b.maxHp||100,b.hp+80);p.v23VehicleUpgradeLevel=Math.min(3,(p.v23VehicleUpgradeLevel||0)+1);setCooldown(55000);notify('Solda concluída. Nível de melhoria do veículo: '+p.v23VehicleUpgradeLevel+'/3.');}
   else if(id==='carpenter'){const b=(s.builds||[]).filter(v=>['barricade','wall','reinforcedGate','wallSegment'].includes(v.type)).sort((a,b)=>(a.hp||0)-(b.hp||0))[0];if(b)b.hp=Math.min(b.maxHp||200,(b.hp||0)+95);else s.wood=Math.min(999,(s.wood||0)+6);setCooldown(48000);notify('Reforço de madeira aplicado.');}
   else if(id==='farmer'){s.food=Math.min(99,(s.food||0)+8);s.hunger=Math.min(100,(s.hunger||0)+12);for(const farm of s.builds||[])if(farm.type==='farm')farm.v23GrowthBoostUntil=Date.now()+60000;setCooldown(65000);notify('Reserva agrícola preparada; hortas receberam impulso temporário.');}
   else if(id==='scientist'){s.v20CureResearch=Math.min(100,(s.v20CureResearch||0)+28);if(p.infection){p.infection.progress=Math.min(100,(p.infection.progress||0)+30);if(p.infection.progress>=100)p.infection=null;}setCooldown(70000);notify('Pesquisa científica acelerada.');}
@@ -158,6 +158,8 @@
  bridge.wrap('weaponDamage',old=>function(){let d=old(),s=state(),id=selected();if(s?.player?.v23DamageBoostUntil>Date.now())d*=1.5;if(id==='scout')d*=1.1;if(id==='hybrid_werewolf'&&s?.player?.v23ClawsUntil>Date.now())d*=1.35;if(id==='hybrid_vampire')d*=1.08;if(id==='commander'&&s?.player?.v23RallyUntil>Date.now())d*=1.12;return Math.round(d);});
  bridge.wrap('movePlayer',old=>function(dt){const p=state()?.player;if(!p)return old(dt);const speed=p.speed;let m=1;if(selected()==='rescuer')m*=1.12;if(selected()==='hunter')m*=1.08;if(['hybrid','hybrid_vampire','hybrid_werewolf'].includes(selected()))m*=1.18;if(p.v23SpeedUntil>Date.now())m*=1.35;if(selected()==='hybrid_werewolf'&&p.v23ClawsUntil>Date.now())m*=1.2;p.speed=speed*m;try{return old(dt);}finally{p.speed=speed;}});
  bridge.wrap('v16Capacity',old=>function(){return old()*(selected()==='explorer'?2:1);});
+ // Mechanic upgrades the selected vehicle's travel speed using the Welding skill.
+ bridge.wrap('getVehicle',old=>function(id){const v=old(id),p=state()?.player,level=selected()==='mechanic'?(p?.v23VehicleUpgradeLevel||0):0;return level?{...v,speed:Math.round(v.speed*(1+level*.08))}:v;});
  bridge.wrap('puzzleSettings',old=>function(){const r={...old()},id=selected(),p=state()?.player;if(id==='medic'){r.window=Math.min(.55,r.window*1.2);r.speed*=.8;}if(id==='rescuer'){r.window=Math.min(.62,r.window*1.5);r.speed*=.5;r.rounds=Math.max(1,r.rounds-1);}if(p?.v23EmergencyUntil>Date.now()){r.window=Math.min(.7,r.window*1.8);r.speed*=.2;}return r;});
  bridge.wrap('freshState',old=>function(){const s=old(),id=s.player?.classId||selected();s.tools=s.tools||{};s.player.ownedWeapons=s.player.ownedWeapons||['club'];
   if(id==='medic'){s.tools.medkit=1;s.medicine=Math.max(1,Number(s.medicine)||0);s.player.v23MedicalErrorChance=.5;}
@@ -175,6 +177,21 @@
   if(id==='cartographer'||id==='navigator')s.tools.compass=Math.max(1,Number(s.tools.compass)||0);
   if(id==='navigator')s.tools.boatKit=1;
   return s;});
+ // Farmer's crops grow faster and yield 25% more food when a harvest succeeds.
+ bridge.wrap('advanceNight',old=>function(...args){
+  const s=state(),farmer=selected()==='farmer',beforeFood=Number(s?.food)||0;
+  if(farmer)for(const farm of s?.builds||[])if(farm.type==='farm'&&farm.watered)farm.growth=(farm.growth||0)+1;
+  const result=old(...args);
+  if(farmer&&s){const harvested=Math.max(0,(Number(s.food)||0)-beforeFood);if(harvested>0)s.food=Math.min(99,(Number(s.food)||0)+Math.ceil(harvested*.25));}
+  return result;
+ });
+ // Mechanic receives a 30% price reduction on vehicles in the vehicle selection panel.
+ const vehicleBasePrices=new Map();
+ bridge.wrap('renderVehicles',old=>function(...args){
+  const vehicles=bridge.getVehicles(),mechanic=selected()==='mechanic';
+  for(const v of vehicles){if(!vehicleBasePrices.has(v.id))vehicleBasePrices.set(v.id,Number(v.cost)||0);const base=vehicleBasePrices.get(v.id);v.cost=mechanic?Math.ceil(base*.7):base;}
+  return old(...args);
+ });
  // Class-exclusive weapon definitions.
  const weaponDefs=[
   {id:'soldier_exclusive',name:'Fuzil de Combate',kind:'ranged',cost:999999,damage:35,cooldown:.36,range:720,description:'Arma exclusiva do Soldado · achado raro',speed:760,pellets:1,spread:.02,classOnly:true},
@@ -188,7 +205,17 @@
  function grantWeapon(id){const s=state(),p=s?.player;if(!p)return false;p.ownedWeapons=p.ownedWeapons||['club'];if(p.ownedWeapons.includes(id))return false;p.ownedWeapons.push(id);p.weaponId=id;const w=weaponDefs.find(v=>v.id===id);notify((w?.name||id)+' encontrada!');bridge.getFn('renderArsenal')?.();bridge.getFn('updateUI')?.();bridge.getFn('saveGame')?.(false);return true;}
  bridge.wrap('enterBuilding',old=>function(b){const r=old(b),id=selected(),label=String(b?.title||b?.name||b?.type||'').toLowerCase(),mil=/milit|base|aeroporto|heliponto/.test(label),pol=/pol[ií]cia|police|delegacia|posto policial/.test(label),key=String(b?.id||label),s=state();if(s){s.v23WeaponLootSites=s.v23WeaponLootSites||[];if(!s.v23WeaponLootSites.includes(key)){let chance=0,weapon='';if(mil){chance=.5;if(id==='soldier'){chance=.1;weapon='soldier_exclusive';}else if(id==='scout')weapon=Math.random()<.5?'police_exclusive':'soldier_exclusive';else if(id==='watchman')weapon=Math.random()<.5?'security_exclusive':'police_exclusive';}else if(pol){chance=.1;if(id==='scout')weapon='police_exclusive';else if(id==='watchman')weapon='security_exclusive';else if(id==='soldier')weapon='soldier_exclusive';}if(weapon){s.v23WeaponLootSites.push(key);if(Math.random()<chance)grantWeapon(weapon);}}}return r;});
  // Item/material discount at construction time, without mutating shared class recipes.
- bridge.wrap('placeBuild',old=>function(...args){const s=state(),before=s?.scrap||0,count=s?.builds?.length||0,id=selected(),r=old(...args);if(s&&((s.builds?.length||0)>count)){const cost=Math.max(0,before-(s.scrap||0));const current=String(s.builds[s.builds.length-1]?.type||'').toLowerCase();const eligible=id==='engineer'||(id==='carpenter'&&/wood|wall|shelter|farm|greenhouse|barricade/.test(current))||(id==='mechanic'&&/generator|radio|lamp|turret|garage|vehicle/.test(current))||(id==='mason'&&/wall|brick|stone|mortar|gate|reinforced/.test(current));if(eligible&&cost>0)s.scrap=Math.min(99999,s.scrap+Math.floor(cost*.3));}return r;});
+ bridge.wrap('placeBuild',old=>function(...args){
+  const s=state(),id=selected(),buildId=bridge.getSelectedBuild?.(),costs=API.buildCost?.(buildId)||{},before={};
+  for(const key of Object.keys(costs))before[key]=Number(s?.[key])||0;
+  const count=s?.builds?.length||0,result=old(...args);
+  if(s&&(s.builds?.length||0)>count){
+   const current=String(s.builds[s.builds.length-1]?.type||'').toLowerCase();
+   const eligible=id==='engineer'||(id==='carpenter'&&/wood|wall|shelter|farm|greenhouse|barricade/.test(current))||(id==='mechanic'&&/generator|radio|lamp|turret|garage|vehicle/.test(current))||(id==='mason'&&/wall|brick|stone|mortar|gate|reinforced/.test(current));
+   if(eligible)for(const key of Object.keys(before)){const used=Math.max(0,before[key]-(Number(s[key])||0));if(used>0)s[key]=Math.min(99999,(Number(s[key])||0)+Math.floor(used*.3));}
+  }
+  return result;
+ });
  // Apply the editor's weapon statistics to the actual equipped weapon as well as its art.
  bridge.wrap('getWeapon',old=>function(id){const base=old(id),override=bridge.getEditorConfig()?.weaponOverrides?.[id];return override?{...base,...override,id:base.id}:base;});
  // Pixel weapon icon drawn in hand at the class + animation-pose offset configured in the editor.
