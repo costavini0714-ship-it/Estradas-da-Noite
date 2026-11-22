@@ -1,0 +1,29 @@
+name: Export game ZIP
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/export-package.yml'
+      - 'index.html'
+      - 'editor.html'
+      - 'server.py'
+      - 'servidor_multiplayer_v14.5.py'
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build ZIP
+        run: |
+          mkdir -p package
+          zip -r package/Estradas_da_Noite_ultima_atualizacao.zip . -x './.git/*' './.github/*'
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Estradas-da-Noite-ultima-atualizacao
+          path: package/Estradas_da_Noite_ultima_atualizacao.zip
+          retention-days: 2
