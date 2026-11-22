@@ -70,10 +70,22 @@
   rescuer:{name:'Estado de Emergência',description:'80% de acerto por 2s.',cooldown:50000},
   explorer:{name:'Coleta Seletiva',description:'Revela itens desta estrutura ou de todas.',cooldown:60000},
   scout:{name:'Golpe Tático',description:'Impacto policial aprimorado em área.',cooldown:38000},
-  watchman:{name:'Defesa Imbatível',description:'+50% de dano por 5s.',cooldown:60000},
+  engineer:{name:'Reparação de Campo',description:'Repara estruturas e o amuleto.',cooldown:55000},
+  carpenter:{name:'Reforço de Madeira',description:'Fortalece uma estrutura de madeira.',cooldown:48000},
+  mechanic:{name:'Solda',description:'Repara mecanismos e melhora o veículo equipado.',cooldown:55000},
+  farmer:{name:'Reserva Agrícola',description:'Gera alimentos e acelera as hortas.',cooldown:65000},
   hunter:{name:'Camuflagem',description:'Fica oculto durante alguns segundos.',cooldown:55000},
-  locksmith:{name:'Chave Mestra',description:'Destranca uma porta próxima.',cooldown:45000},
+  watchman:{name:'Defesa Imbatível',description:'+50% de dano por 5s.',cooldown:60000},
   cook:{name:'Cozinha de Campo',description:'Ativa a cozinha portátil.',cooldown:60000},
+  scientist:{name:'Análise Acelerada',description:'Acelera pesquisas e progresso de cura.',cooldown:70000},
+  locksmith:{name:'Chave Mestra',description:'Destranca uma porta próxima.',cooldown:45000},
+  mason:{name:'Reforço Estrutural',description:'Fortalece paredes e barreiras.',cooldown:55000},
+  citizen:{name:'Improviso',description:'Recupera vida e estamina.',cooldown:55000},
+  cartographer:{name:'Carta Viva',description:'Registra e revela o setor atual.',cooldown:65000},
+  navigator:{name:'Travessia Segura',description:'Prepara você para uma travessia aquática.',cooldown:65000},
+  commander:{name:'Comando Tático',description:'Reúne e fortalece seus aliados.',cooldown:75000},
+  mayor:{name:'Serviço Municipal',description:'Ativa serviços e suprimentos da cidade.',cooldown:90000},
+  tourist:{name:'Registro de Campo',description:'Marca locais e pontos de interesse.',cooldown:60000},
   hybrid:{name:'Invisibilidade',description:'Fica invisível e mais rápido.',cooldown:70000},
   hybrid_vampire:{name:'Predador Noturno',description:'Invisibilidade, velocidade e visão noturna.',cooldown:75000},
   hybrid_werewolf:{name:'Forma Lupina',description:'Garras, velocidade e sentidos ampliados.',cooldown:75000}
@@ -154,8 +166,10 @@
  window.addEventListener('keydown',abilityEvent,true);
  // Preserve every previous bonus and layer in only the new status effects.
  bridge.wrap('damagePlayer',old=>function(d){const p=state()?.player;if(p?.v23VaccineUntil>Date.now())d*=.4;return old(d);});
+ // The Rescuer retains 90% of the Medic's existing treatment benefit.
+ bridge.wrap('useMedicine',old=>function(){const s=state(),p=s?.player;if(selected()==='rescuer'&&s?.medicine>0&&p&&p.hp<p.maxHp){s.medicine--;const amount=Math.min(48,p.maxHp-p.hp);p.hp+=amount;notify('Atendimento do Socorrista: +'+amount+' de vida.');bridge.getFn('updateUI')?.();bridge.getFn('saveGame')?.(false);return;}return old();});
  bridge.wrap('damageCompanion',old=>function(a,d){if(a?.v23VaccineUntil>Date.now())d*=.4;return old(a,d);});
- bridge.wrap('weaponDamage',old=>function(){let d=old(),s=state(),id=selected();if(s?.player?.v23DamageBoostUntil>Date.now())d*=1.5;if(id==='scout')d*=1.1;if(id==='hybrid_werewolf'&&s?.player?.v23ClawsUntil>Date.now())d*=1.35;if(id==='hybrid_vampire')d*=1.08;if(id==='commander'&&s?.player?.v23RallyUntil>Date.now())d*=1.12;return Math.round(d);});
+ bridge.wrap('weaponDamage',old=>function(){let d=old(),s=state(),id=selected();if(s?.player?.v23DamageBoostUntil>Date.now())d*=1.5;if(id==='scout'||id==='watchman')d*=1.1;if(id==='hybrid_werewolf'&&s?.player?.v23ClawsUntil>Date.now())d*=1.35;if(id==='hybrid_vampire')d*=1.08;if(id==='commander'&&s?.player?.v23RallyUntil>Date.now())d*=1.12;return Math.round(d);});
  bridge.wrap('movePlayer',old=>function(dt){const p=state()?.player;if(!p)return old(dt);const speed=p.speed;let m=1;if(selected()==='rescuer')m*=1.12;if(selected()==='hunter')m*=1.08;if(['hybrid','hybrid_vampire','hybrid_werewolf'].includes(selected()))m*=1.18;if(p.v23SpeedUntil>Date.now())m*=1.35;if(selected()==='hybrid_werewolf'&&p.v23ClawsUntil>Date.now())m*=1.2;p.speed=speed*m;try{return old(dt);}finally{p.speed=speed;}});
  bridge.wrap('v16Capacity',old=>function(){return old()*(selected()==='explorer'?2:1);});
  // Mechanic upgrades the selected vehicle's travel speed using the Welding skill.
@@ -203,7 +217,7 @@
  const weapons=bridge.getWeapons();for(const w of weaponDefs)if(!weapons.some(x=>x.id===w.id))weapons.push(w);
  const vehicles=bridge.getVehicles();if(!vehicles.some(v=>v.id==='policeBike'))vehicles.push({id:'policeBike',name:'Moto policial',cost:999999,speed:260,description:'Motocicleta exclusiva do Batedor policial.'});
  function grantWeapon(id){const s=state(),p=s?.player;if(!p)return false;p.ownedWeapons=p.ownedWeapons||['club'];if(p.ownedWeapons.includes(id))return false;p.ownedWeapons.push(id);p.weaponId=id;const w=weaponDefs.find(v=>v.id===id);notify((w?.name||id)+' encontrada!');bridge.getFn('renderArsenal')?.();bridge.getFn('updateUI')?.();bridge.getFn('saveGame')?.(false);return true;}
- bridge.wrap('enterBuilding',old=>function(b){const r=old(b),id=selected(),label=String(b?.title||b?.name||b?.type||'').toLowerCase(),mil=/milit|base|aeroporto|heliponto/.test(label),pol=/pol[ií]cia|police|delegacia|posto policial/.test(label),key=String(b?.id||label),s=state();if(s){s.v23WeaponLootSites=s.v23WeaponLootSites||[];if(!s.v23WeaponLootSites.includes(key)){let chance=0,weapon='';if(mil){chance=.5;if(id==='soldier'){chance=.1;weapon='soldier_exclusive';}else if(id==='scout')weapon=Math.random()<.5?'police_exclusive':'soldier_exclusive';else if(id==='watchman')weapon=Math.random()<.5?'security_exclusive':'police_exclusive';}else if(pol){chance=.1;if(id==='scout')weapon='police_exclusive';else if(id==='watchman')weapon='security_exclusive';else if(id==='soldier')weapon='soldier_exclusive';}if(weapon){s.v23WeaponLootSites.push(key);if(Math.random()<chance)grantWeapon(weapon);}}}return r;});
+ bridge.wrap('enterBuilding',old=>function(b){const r=old(b),s=state(),id=selected(),label=String(b?.title||b?.name||b?.type||'').toLowerCase(),mil=/milit|base|aeroporto|heliponto/.test(label),pol=/pol[ií]cia|police|delegacia|posto policial/.test(label),key=String(b?.id||label);if(s&&s.mode==='interior'&&s.currentBuildingId===b?.id){s.v23WeaponLootSites=s.v23WeaponLootSites||[];if(!s.v23WeaponLootSites.includes(key)){let chance=0,weapon='';if(mil){if(id==='soldier'){chance=.1;weapon='soldier_exclusive';}else if(id==='scout'){chance=.5;weapon=Math.random()<.5?'police_exclusive':'soldier_exclusive';}else if(id==='watchman'){chance=.5;weapon=Math.random()<.5?'security_exclusive':'police_exclusive';}}else if(pol){chance=.1;if(id==='scout')weapon='police_exclusive';else if(id==='watchman')weapon='security_exclusive';else if(id==='soldier')weapon='soldier_exclusive';}if(weapon){s.v23WeaponLootSites.push(key);if(Math.random()<chance)grantWeapon(weapon);}}}return r;});
  // Item/material discount at construction time, without mutating shared class recipes.
  bridge.wrap('placeBuild',old=>function(...args){
   const s=state(),id=selected(),buildId=bridge.getSelectedBuild?.(),costs=API.buildCost?.(buildId)||{},before={};
