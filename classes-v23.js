@@ -38,6 +38,8 @@
  }
  const leader=classes.findIndex(c=>c.id==='leader');if(leader>=0)classes.splice(leader,1);
  for(const c of definitions)if(!byId(c.id))classes.push(c);
+ const classPrices={survivor:0,soldier:180,medic:220,rescuer:240,explorer:260,scout:320,engineer:420,carpenter:240,mechanic:300,farmer:220,hunter:360,watchman:280,cook:190,scientist:480,locksmith:390,mason:250,citizen:90,cartographer:420,navigator:480,commander:950,mayor:1400,tourist:130,hybrid:2500,hybrid_vampire:4500,hybrid_werewolf:4500};
+ for(const c of classes)if(classPrices[c.id]!==undefined)c.price=classPrices[c.id];
  const ids=classes.map(c=>c.id);API.migrateClassCatalog?.(ids);
  const profile=()=>API.profile?.()||{owned:['survivor'],selected:'survivor',coins:0};
  const selected=()=>String(profile().selected||'survivor'),own=id=>profile().owned?.includes(id)||false;
