@@ -9,6 +9,7 @@ window.__OITO_V24_INSTALLED__=true;
 const $=id=>document.getElementById(id),state=()=>bridge.getState();
 const profile=()=>API.profile?.()||{selected:'survivor'};
 const role=()=>String(profile().selected||state()?.player?.classId||'survivor');
+const upgradeLevel=()=>clamp(Number(API.getClassUpgradeLevel?.(role()))||0,0,3);
 const say=m=>bridge.getFn('say')?.(m);
 const save=()=>{bridge.getFn('updateUI')?.();bridge.getFn('saveGame')?.(false);};
 const now=()=>Date.now();
@@ -87,7 +88,7 @@ function onAnimal(a){
  if(role()!=='farmer'){say(sp.name+' observado. O Agricultor pode tentar domesticar animais da floresta.');return;}
  if((Number(s.food)||0)<1){say('É preciso 1 porção de comida para atrair o animal.');return;}
  s.food--;
- if(Math.random()>sp.tameChance){a.alert=8;a.targetX=clamp(a.x+(Math.random()-.5)*180,40,960);a.targetY=clamp(a.y+(Math.random()-.5)*150,40,560);say(sp.name+' se afastou. Tente novamente com calma.');save();return;}
+ if(Math.random()>Math.min(.98,sp.tameChance+upgradeLevel()*.04)){a.alert=8;a.targetX=clamp(a.x+(Math.random()-.5)*180,40,960);a.targetY=clamp(a.y+(Math.random()-.5)*150,40,560);say(sp.name+' se afastou. Tente novamente com calma.');save();return;}
  farmList(s).push({id:a.id,name:sp.name,icon:sp.icon,speciesId:sp.id,produce:sp.produce,mountable:sp.mountable||false,level:1,trust:100});
  a.tamed=true;
  if(sp.mountable){s.player.v24MountedAnimal=a.id;s.player.v24MountSpeed=1.25;say(sp.name+' domesticado! Você pode montá-lo para viajar mais rápido.');}
@@ -101,7 +102,7 @@ function forage(n){
  const amount=Math.min(n.amount,item.qty);
  n.amount-=amount;if(n.amount<=0)n.collected=true;
  const inv=s.v24CookIngredients||(s.v24CookIngredients={});
- if(item.yield==='sample'){s.tools=s.tools||{};s.tools.antiviralSample=(s.tools.antiviralSample||0)+1;s.v24ResearchPoints=(s.v24ResearchPoints||0)+8;say('Amostra vegetal rara coletada para pesquisas do Cientista.');}
+ if(item.yield==='sample'){s.tools=s.tools||{};s.tools.antiviralSample=(s.tools.antiviralSample||0)+1;s.v24ResearchPoints=(s.v24ResearchPoints||0)+8+upgradeLevel()*2;say('Amostra vegetal rara coletada para pesquisas do Cientista.');}
  else{inv[item.yield]=(Number(inv[item.yield])||0)+amount;say('Coleta: '+item.name+' ×'+amount+'.');}
  if(role()==='farmer'&&item.yield==='seeds')s.tools.seeds=(s.tools.seeds||0)+1;
  save();
@@ -180,7 +181,7 @@ function buildAt(x,y){
  activeStructures(s).push(item);window.__OITO_V24_PENDING_BUILD__=null;say(bp.label+' construído.');save();return true;
 }
 const vehicles=bridge.getVehicles();if(!vehicles.some(v=>v.id==='boat'))vehicles.push({id:'boat',name:'Barco de travessia',cost:999999,speed:245,description:'Embarcação do Navegador · travessia de rios, lagos e mar.'});
-bridge.wrap('getVehicle',old=>function(id){const v=old(id),p=state()?.player;if(id==='boat'&&role()==='navigator'&&p?.v23NavigationUntil>Date.now())return {...v,speed:Math.round(v.speed*1.25)};return v;});
+bridge.wrap('getVehicle',old=>function(id){const v=old(id),p=state()?.player;if(id==='boat'&&role()==='navigator'){const skill=p?.v23NavigationUntil>Date.now()?1.25:1;return {...v,speed:Math.round(v.speed*skill*(1+upgradeLevel()*.04))};}return v;});
 const canvas=bridge.getCanvasContext()?.canvas;
 if(canvas){
  canvas.addEventListener('pointerdown',ev=>{
@@ -229,11 +230,11 @@ function researchPanel(){
  const box=document.createElement('section');box.style.cssText='width:min(520px,96vw);background:#162b35;border:1px solid #8de0c0;border-radius:14px;padding:16px;color:#fff';
  const h=document.createElement('h2');h.textContent='Laboratório portátil';h.style.margin='0 0 5px';
  const p=document.createElement('p');p.textContent='Amostras da floresta, componentes e medicamentos podem ser analisados para desenvolver a cura fictícia do jogo.';p.style.cssText='font-size:12px;color:#c0d0cb';
- const points=Number(s.v24ResearchPoints)||0,sample=Number(s.tools?.antiviralSample)||0,parts=Number(s.parts)||0,medicine=Number(s.medicine)||0;
+ const points=Number(s.v24ResearchPoints)||0,sample=Number(s.tools?.antiviralSample)||0,parts=Number(s.parts)||0,medicine=Number(s.medicine)||0,researchCost=Math.max(85,100-upgradeLevel()*5),partsCost=Math.max(2,3-Math.floor(upgradeLevel()/2));
  const info=document.createElement('p');info.textContent='Pesquisa: '+points+'/100 · Amostras: '+sample+' · Componentes: '+parts+' · Medicamentos: '+medicine;
  const grid=document.createElement('div');grid.style.cssText='display:grid;gap:8px';
  const study=document.createElement('button');study.textContent='Estudar amostra · +20 pesquisa';study.className='btn';study.disabled=sample<1;study.onclick=()=>{s.tools.antiviralSample--;s.v24ResearchPoints=Math.min(100,(s.v24ResearchPoints||0)+20);say('Amostra analisada. Pesquisa: '+s.v24ResearchPoints+'/100.');save();root.remove();};
- const cure=document.createElement('button');cure.textContent='Desenvolver cura antiviral · 100 pesquisa, 1 amostra, 3 componentes e 1 medicamento';cure.className='btn gold';cure.disabled=points<100||sample<1||parts<3||medicine<1;cure.onclick=()=>{s.v24ResearchPoints-=100;s.tools.antiviralSample--;s.parts-=3;s.medicine--;if(s.player.infection)s.player.infection=null;s.v24CuredViruses=(s.v24CuredViruses||0)+1;say('Cura antiviral desenvolvida e aplicada.');save();root.remove();};
+ const cure=document.createElement('button');cure.textContent='Desenvolver cura antiviral · '+researchCost+' pesquisa, 1 amostra, '+partsCost+' componentes e 1 medicamento';cure.className='btn gold';cure.disabled=points<researchCost||sample<1||parts<partsCost||medicine<1;cure.onclick=()=>{s.v24ResearchPoints-=researchCost;s.tools.antiviralSample--;s.parts-=partsCost;s.medicine--;if(s.player.infection)s.player.infection=null;s.v24CuredViruses=(s.v24CuredViruses||0)+1;say('Cura antiviral desenvolvida e aplicada.');save();root.remove();};
  const close=document.createElement('button');close.textContent='Fechar';close.className='btn alt';close.onclick=()=>root.remove();grid.append(study,cure);box.append(h,p,info,grid,close);root.append(box);document.body.append(root);
 }
 function farmPanel(){
@@ -328,19 +329,19 @@ bridge.wrap('useMedicine',old=>function(...args){
  if(Math.random()<error){s.medicine=Math.max(0,s.medicine-1);say('Procedimento não concluído. O problema exigiu uma nova tentativa. Medicamentos restantes: '+s.medicine+'.');save();return false;}
  if(id==='rescuer'){
   s.medicine=Math.max(0,s.medicine-1);
-  const amount=Math.min(38,p.maxHp-p.hp);p.hp+=amount;
+  const amount=Math.min(Math.round(37.8*(1+upgradeLevel()*.03)),p.maxHp-p.hp);p.hp+=amount;
   say('Socorrista: procedimento concluído com 90% do benefício médico · +'+amount+' de vida.');
   save();return true;
  }
  const before=p.hp,result=old(...args);
- if(id==='medic'&&p.hp>before)p.hp=Math.min(p.maxHp,before+Math.round((p.hp-before)*.2));
+ if(id==='medic'&&p.hp>before)p.hp=Math.min(p.maxHp,before+Math.round((p.hp-before)*(.2+upgradeLevel()*.03)));
  save();return result;
 });
-bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||0;return Math.round(d*(role()==='soldier'?1.18:1));});
+bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||0;return Math.round(d*(role()==='soldier'?1.18+upgradeLevel()*.04:role()==='watchman'?1+upgradeLevel()*.025:1));});
 bridge.wrap('movePlayer',old=>function(dt,...args){
  const s=state(),p=s?.player;if(!p)return old(dt,...args);
  const speed=p.speed,mounted=!!p.v24MountedAnimal;
- if(mounted&&role()==='farmer')p.speed=speed*1.25;
+ if(mounted&&role()==='farmer')p.speed=speed*(1.25+upgradeLevel()*.015);
  const before={x:p.x,y:p.y},crossing=p.v24CrossingAt>Date.now();
  try{
   const result=old(dt,...args),w=s.mode==='scavenge'?s.outsideMap?.waterway:null;
@@ -383,7 +384,7 @@ document.addEventListener('keydown',ev=>{
  if(key==='c'&&id==='cook'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();cookPanel();return;}
  if(key==='x'&&id==='scientist'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();researchPanel();return;}
  if(key==='j'&&id==='farmer'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();farmPanel();return;}
- if(key==='f'&&id==='cook'&&(s.v24CookedMeals||0)>0&&s.hunger<99){ev.preventDefault();ev.stopImmediatePropagation();s.v24CookedMeals--;s.hunger=Math.min(100,s.hunger+Math.round(45*1.2));say('Refeição preparada consumida. Saciedade +20%. Restam '+s.v24CookedMeals+'.');save();return;}
+ if(key==='f'&&id==='cook'&&(s.v24CookedMeals||0)>0&&s.hunger<99){ev.preventDefault();ev.stopImmediatePropagation();s.v24CookedMeals--;s.hunger=Math.min(100,s.hunger+Math.round(45*(1.2+upgradeLevel()*.04)));say('Refeição preparada consumida. Saciedade +20%. Restam '+s.v24CookedMeals+'.');save();return;}
  if(key==='z'&&id==='hunter'){ev.preventDefault();ev.stopImmediatePropagation();s.player.v24Scoped=!s.player.v24Scoped;say(s.player.v24Scoped?'Mira de caça ativada. Mire antes de disparar.':'Mira de caça desativada.');return;}
 },true);
 if(canvas){
