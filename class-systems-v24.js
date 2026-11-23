@@ -61,7 +61,7 @@ function ensureWorld(s){
  if(!Array.isArray(map.forageNodes)){
   map.forageNodes=[];
   for(let i=0;i<10;i++){
-   const d=forageDefs[Math.floor(Math.random()*forageDefs.length)],pt=randPoint(map);
+   const rareChance=role()==='scientist'?.3:.1,common=forageDefs.filter(v=>v.id!=='antiviral'),d=Math.random()<rareChance?forageDefs.find(v=>v.id==='antiviral'):common[Math.floor(Math.random()*common.length)],pt=randPoint(map);
    map.forageNodes.push({id:d.id+'_'+map.seed+'_'+i,kind:d.id,name:d.name,icon:d.icon,x:pt.x,y:pt.y,amount:d.qty+Math.floor(Math.random()*2),collected:false});
   }
  }
@@ -231,7 +231,7 @@ function cookPanel(){
  const box=document.createElement('section');box.style.cssText='width:min(520px,96vw);background:#172d32;border:1px solid #e2bd71;border-radius:14px;padding:16px;color:#fff';
  const h=document.createElement('h2');h.textContent='Cozinha de campo';h.style.margin='0 0 5px';
  const p=document.createElement('p');p.textContent='Fogueira acesa. As refeições do Cozinheiro saciam 20% mais que uma porção comum.';p.style.cssText='color:#c4d2cc;font-size:12px';
- const info=document.createElement('p');info.textContent='Frutas: '+(inv.fruit||0)+' · Frutas silvestres: '+(inv.berries||0)+' · Folhas: '+(inv.leaves||0)+' · Ervas: '+(inv.herbs||0)+' · Cogumelos: '+(inv.mushrooms||0)+' · Comida: '+(s.food||0);
+ const info=document.createElement('p');info.textContent='Frutas: '+(inv.fruit||0)+' · Frutas silvestres: '+(inv.berries||0)+' · Folhas: '+(inv.leaves||0)+' · Ervas: '+(inv.herbs||0)+' · Cogumelos: '+(inv.mushrooms||0)+' · Carne: '+(inv.meat||0)+' · Comida: '+(s.food||0);
  const grid=document.createElement('div');grid.style.cssText='display:grid;gap:8px';
  const recipes=[
   {name:'Ensopado de carne',need:{meat:1,leaves:1},text:'1 carne crua + 1 folha',meal:1},
@@ -266,7 +266,7 @@ function farmPanel(){
  const s=state();if(!s||role()!=='farmer'){say('A agropecuária é administrada pelo Agricultor.');return;}
  const animals=farmList(s),root=document.createElement('div');root.id='v24FarmPanel';root.style.cssText='position:fixed;inset:0;z-index:980;background:#071017ed;display:flex;align-items:center;justify-content:center;padding:12px';
  const box=document.createElement('section');box.style.cssText='width:min(540px,96vw);max-height:85vh;overflow:auto;background:#193027;border:1px solid #9bc58a;border-radius:14px;padding:16px;color:#fff';
- const h=document.createElement('h2');h.textContent='Agropecuária';h.style.margin='0 0 8px';const desc=document.createElement('p');desc.textContent='Animais domesticados produzem recursos ao longo das noites. Use V para montar ou desmontar cavalos e burros.';desc.style.cssText='font-size:12px;color:#c7d9c4';
+ const h=document.createElement('h2');h.textContent='Agropecuária';h.style.margin='0 0 8px';const desc=document.createElement('p');desc.textContent='Animais domesticados produzem recursos ao longo das noites. Use V para montar/desmontar cavalos e burros. Ovos: '+(s.v24FarmProducts?.eggs||0)+' · Penas: '+(s.v24FarmProducts?.feathers||0)+'.';desc.style.cssText='font-size:12px;color:#c7d9c4';
  const list=document.createElement('div');list.style.cssText='display:grid;gap:6px';
  if(!animals.length){const empty=document.createElement('p');empty.textContent='Nenhum animal domesticado. Explore a floresta e aproxime-se de um animal para oferecer comida.';list.append(empty);}
  for(const a of animals){const row=document.createElement('div');row.style.cssText='padding:9px;border:1px solid #63826a;border-radius:8px;background:#213e30';row.textContent=a.icon+' '+a.name+' · vínculo '+a.trust+'%'+(a.mountable?' · montável':'');list.append(row);}
@@ -316,7 +316,12 @@ function updateWorld(dt,s){
    const dx=a.targetX-a.x,dy=a.targetY-a.y,len=Math.hypot(dx,dy)||1,step=(a.speed||1)*13*dt;
    if(len>5){a.x+=dx/len*Math.min(step,len);a.y+=dy/len*Math.min(step,len);}
   }
-  for(const o of s.outsideMap.fieldStructures||[])if(o.type==='field_trap'&&now()>(o.readyAt||Infinity)){o.readyAt=now()+90000;o.caught=(o.caught||0)+1;s.food=Math.min(99,(s.food||0)+1);say('Uma armadilha de campo encontrou alimento.');}
+  for(const o of s.outsideMap.fieldStructures||[])if(o.type==='field_trap'&&now()>(o.readyAt||Infinity)){
+   o.readyAt=now()+90000;o.caught=(o.caught||0)+1;
+   const caught=(s.outsideMap.wildlife||[]).find(a=>!a.tamed&&a.kind!=='predator'&&Math.hypot(a.x-o.x,a.y-o.y)<85);
+   if(caught){s.outsideMap.wildlife=s.outsideMap.wildlife.filter(a=>a!==caught);s.v24CookIngredients=s.v24CookIngredients||{};s.v24CookIngredients.meat=(s.v24CookIngredients.meat||0)+1;s.food=Math.min(99,(s.food||0)+1);say('Armadilha capturou '+caught.name+'. Carne adicionada à cozinha.');}
+   else{s.food=Math.min(99,(s.food||0)+1);say('Armadilha de campo encontrou alimento.');}
+  }
   for(const o of s.outsideMap.fieldStructures||[])if(o.type==='listening_post'&&now()>(o.nextScanAt||0)){
    o.nextScanAt=now()+5000;o.scanUntil=now()+1800;
    const threats=(s.exploreMonsters||[]).filter(m=>Math.hypot(m.x-o.x,m.y-o.y)<190);
@@ -339,6 +344,10 @@ function applyFarmProduction(s){
 bridge.wrap('freshState',old=>function(...args){
  const s=old(...args),id=role();s.v24FarmAnimals=[];s.v24CookIngredients={berries:0,fruit:0,leaves:0,herbs:0,mushrooms:0,seeds:0};s.v24CookedMeals=0;s.v24ResearchPoints=0;s.v24CuredViruses=0;s.v24FarmProducts={eggs:0,feathers:0};s.v24BaseStructures=s.v24BaseStructures||[];
  if(s.player){s.player.classId=id;s.player.v24MountedAnimal=null;}
+ const hand=bridge.getEditorConfig()?.universalRig?.handItems?.[id];
+ if(hand?.kind==='weapon'&&bridge.getWeapons().some(w=>w.id===hand.id)){
+  s.player.ownedWeapons=s.player.ownedWeapons||['club'];if(!s.player.ownedWeapons.includes(hand.id))s.player.ownedWeapons.push(hand.id);s.player.weaponId=hand.id;
+ }
  if(['engineer','carpenter','mechanic'].includes(id)){
   const level=id==='engineer'?8:2;s.benchTier=Math.max(s.benchTier||1,level);
   if(!s.builds.some(b=>b.type==='bench'))s.builds.push({id:'v24_class_bench',type:'bench',x:500,y:392,c:Math.floor(500/50),r:Math.floor(392/50),hp:180,maxHp:180,cool:0,level});
@@ -440,12 +449,13 @@ const v24HandImages=new Map();
 function v24Image(url){let img=v24HandImages.get(url);if(!img){img=new Image();img.src=url;img.onload=()=>{};v24HandImages.set(url,img);}return img;}
 bridge.wrap('drawPlayer',old=>function(...args){
  const result=old(...args),s=state(),p=s?.player;if(!p)return result;
- const cfg=bridge.getEditorConfig(),id=role(),hand=cfg?.universalRig?.handItems?.[id];if(!hand||!['customItem','lootItem'].includes(hand.kind))return result;
- const entry=hand.kind==='customItem'?cfg?.customItems?.[hand.id]:cfg?.itemOverrides?.[hand.id],url=entry?.iconImage;
+ const cfg=bridge.getEditorConfig(),id=role(),hand=cfg?.universalRig?.handItems?.[id];if(!hand||!['weapon','customItem','lootItem'].includes(hand.kind))return result;
+ if(hand.kind==='weapon'&&hand.id===p.weaponId)return result;
+ const entry=hand.kind==='weapon'?cfg?.weaponOverrides?.[hand.id]:hand.kind==='customItem'?cfg?.customItems?.[hand.id]:cfg?.itemOverrides?.[hand.id],url=entry?.iconImage;
  if(!url)return result;
  const img=v24Image(url);if(!img.complete||!img.naturalWidth)return result;
  const pose=p.attackUntil>performance.now()?'attack':(Math.abs(p.vx||0)+Math.abs(p.vy||0)>.2?'walk':'idle');
- const key=hand.kind+'::'+hand.id,rig=cfg?.universalRig?.itemOffsets?.[id]?.[key]?.[pose]||cfg?.universalRig?.itemOffsets?.[id]?.[key]?.idle||cfg?.universalRig?.classOffsets?.[id]?.[pose]||cfg?.universalRig?.classOffsets?.[id]?.idle||{};
+ const key=hand.kind==='weapon'?hand.id:hand.kind+'::'+hand.id,rig=cfg?.universalRig?.itemOffsets?.[id]?.[key]?.[pose]||cfg?.universalRig?.itemOffsets?.[id]?.[key]?.idle||cfg?.universalRig?.classOffsets?.[id]?.[pose]||cfg?.universalRig?.classOffsets?.[id]?.idle||{};
  const ctx=bridge.getCanvasContext();if(!ctx)return result;
  const scale=clamp(Number(rig.scale)||.75,.35,2.5),angle=(Number(rig.angle)||0)*Math.PI/180;
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(Number(p.attackAngle)||0);ctx.translate(Number(rig.x??13),Number(rig.y??-10));ctx.rotate(angle);ctx.imageSmoothingEnabled=false;ctx.drawImage(img,-16*scale,-16*scale,32*scale,32*scale);ctx.restore();
