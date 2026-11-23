@@ -379,7 +379,7 @@ document.addEventListener('keydown',ev=>{
  if(ev.repeat)return;
  const key=ev.key.toLowerCase(),id=role();
  if(key==='e'&&nearestWorldThing(s)){ev.preventDefault();ev.stopImmediatePropagation();handleNear();return;}
- if(key==='m'&&id==='farmer'){const p=s.player,animals=farmList(s).filter(a=>a.mountable);if(p.v24MountedAnimal){p.v24MountedAnimal=null;say('Você desmontou.');}else if(animals.length){p.v24MountedAnimal=animals[0].id;say('Você montou '+animals[0].name+'.');}else say('Domestique um cavalo ou burro primeiro.');save();return;}
+ if(key==='m'&&id==='farmer'){ev.preventDefault();ev.stopImmediatePropagation();const p=s.player,animals=farmList(s).filter(a=>a.mountable);if(p.v24MountedAnimal){p.v24MountedAnimal=null;say('Você desmontou.');}else if(animals.length){p.v24MountedAnimal=animals[0].id;say('Você montou '+animals[0].name+'.');}else say('Domestique um cavalo ou burro primeiro.');save();return;}
  if(key==='b'&&s.mode==='scavenge'&&['engineer','carpenter'].includes(id)){ev.preventDefault();ev.stopImmediatePropagation();fieldPanel();return;}
  if(key==='c'&&id==='cook'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();cookPanel();return;}
  if(key==='x'&&id==='scientist'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();researchPanel();return;}
