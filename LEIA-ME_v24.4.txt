@@ -1,4 +1,4 @@
-OITO ENTRADAS — ATUALIZAÇÃO 24.4
+OITO ENTRADAS — ATUALIZAÇÃO 24.5
 =================================
 
 ARQUIVOS
@@ -9,11 +9,11 @@ ARQUIVOS
 
 CONTROLES DA VERSÃO 24.4
 - E: interagir com objetos, animais, plantas e entradas de água.
-- B: abrir oficina de campo (Engenheiro/Carpinteiro, durante exploração).
+- B: abrir oficina de campo (Engenheiro/Carpinteiro) ou estação científica (Cientista), durante exploração.
 - C: abrir cozinha portátil (Cozinheiro).
 - X: abrir laboratório de pesquisa (Cientista).
 - J: abrir agropecuária (Agricultor).
-- M: montar/desmontar cavalo ou burro domesticado (Agricultor).
+- V: montar/desmontar cavalo ou burro domesticado (Agricultor).
 - Z: ligar/desligar a mira telescópica (Caçador).
 - L: ligar/desligar lanterna (Segurança).
 - F: consumir refeição preparada (Cozinheiro).
@@ -23,16 +23,16 @@ SISTEMAS INCLUÍDOS
 - Animais se movimentam e podem ser domesticados pelo Agricultor; alguns podem ser montados.
 - Plantas e recursos silvestres para Explorador, Agricultor, Cozinheiro e Cientista.
 - Rios, lagos e áreas oceânicas em setores adequados; o Navegador começa com barco e atravessa por E nas margens.
-- Cozinha portátil com fogueira e receitas de folhas, frutas, cogumelos e ervas.
+- Cozinha portátil com fogueira e receitas de folhas, frutas, cogumelos, ervas e carne.
 - Pesquisa fictícia no jogo e desenvolvimento de cura antiviral por meio de recursos e pontos de pesquisa.
-- Construção de campo para Engenheiro e projetos de madeira para Carpinteiro.
-- Armadilhas e escutas de campo do Engenheiro.
+- Construção de campo para Engenheiro, projetos de madeira para Carpinteiro e estação de pesquisa para Cientista.
+- Armadilhas e escutas de campo do Engenheiro; a escuta alerta sobre monstros próximos.
 - Manequim do editor com poses parado, andando e atacando, ajuste por classe/item/pose e opção de equipar itens desenhados na mão.
 - Melhorias pagas de classe: cada nível reduz 4% da recarga da habilidade e fortalece algumas especialidades.
 
 LIMITES IMPORTANTES
 - O ajuste automático do manequim usa sugestões predefinidas por classe; não é uma IA externa que aprende ou simula fisicamente todos os esqueletos.
-- A mira do Caçador é uma sobreposição de luneta no canvas, não uma câmera 3D em primeira pessoa.
+- A mira do Caçador é uma sobreposição de luneta no canvas; permite acertar animais, mas não é uma câmera 3D em primeira pessoa.
 - A fauna é um sistema 2D de exploração; as 61 espécies estão catalogadas, mas somente uma parte aparece em cada mapa.
 - As estruturas de campo são objetos 2D de jogo; não são um editor de construção 3D livre.
 - A água é uma mecânica 2D de travessia. A travessia longa entre abrigos usa a rota aquática visual quando o Navegador escolhe o barco.
