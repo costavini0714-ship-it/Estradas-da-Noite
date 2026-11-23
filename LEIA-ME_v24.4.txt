@@ -1,44 +1,59 @@
-OITO ENTRADAS — ATUALIZAÇÃO 24.6
-=================================
+OITO ENTRADAS — VERSÃO 24.7
+===============================
 
-ARQUIVOS
-- index.html: jogo principal; carrega os sistemas v23 e v24.4.
-- classes-v23.js: atributos, habilidades, classes, raridade de armas, melhorias pagas.
-- class-systems-v24.js: fauna, plantas, travessias, agropecuária, cozinha, pesquisa e construção de campo.
-- editor.html: Estúdio Universal, desenho pixel a pixel e manequim de animação.
+Arquivos principais:
+- index.html: jogo
+- classes-v23.js: classes, atributos, habilidades, raridade de armas e melhorias pagas
+- class-systems-v24.js: sistemas adicionais de exploração e classes
+- editor.html: Estúdio Universal e manequim
+- servidor_multiplayer_v14.5.py: servidor multiplayer e sincronização do editor
 
-CONTROLES DA VERSÃO 24.4
-- E: interagir com objetos, animais, plantas e entradas de água.
-- B: também abre a estação científica de campo para o Cientista.
-- B: abrir oficina de campo (Engenheiro/Carpinteiro) ou estação científica (Cientista), durante exploração.
-- C: abrir cozinha portátil (Cozinheiro).
-- X: abrir laboratório de pesquisa (Cientista).
-- J: abrir agropecuária (Agricultor).
-- V: montar/desmontar cavalo ou burro domesticado (Agricultor).
-- Z: ligar/desligar a mira telescópica (Caçador).
-- L: ligar/desligar lanterna (Segurança).
-- F: consumir refeição preparada (Cozinheiro).
+CONTROLES NOVOS
+- E: interagir com animais, plantas e travessias de água.
+- B: oficina de campo para Engenheiro/Carpinteiro; estação científica para Cientista.
+- C: cozinha portátil para Cozinheiro.
+- X: abrir laboratório do Cientista.
+- J: abrir agropecuária do Agricultor.
+- V: montar ou desmontar cavalo/burro domesticado.
+- Z: ativar/desativar a mira de caça.
+- Y: consumir sangue na forma vampírica do Híbrido.
+- L: ligar/desligar a lanterna da Segurança.
+- F: consumir uma refeição preparada pelo Cozinheiro.
+- Q: ativar a habilidade especial (mantém o controle original do jogo).
 
-SISTEMAS INCLUÍDOS
-- Catálogo com 61 espécies de animais; cada expedição mostra uma seleção, não todas de uma vez.
-- Animais se movimentam e podem ser domesticados pelo Agricultor; alguns podem ser montados.
-- Plantas e recursos silvestres para Explorador, Agricultor, Cozinheiro e Cientista.
-- Rios, lagos e áreas oceânicas em setores adequados; o Navegador começa com barco e atravessa por E nas margens.
-- Cozinha portátil com fogueira e receitas de folhas, frutas, cogumelos, ervas e carne.
-- Pesquisa fictícia no jogo e desenvolvimento de cura antiviral por meio de recursos e pontos de pesquisa.
-- Construção de campo para Engenheiro, projetos de madeira para Carpinteiro e estação de pesquisa para Cientista.
-- Armadilhas e escutas de campo do Engenheiro; a escuta alerta sobre monstros próximos.
-- Manequim do editor com poses parado, andando e atacando, ajuste por classe/item/pose e opção de equipar itens desenhados na mão.
-- Melhorias pagas de classe: cada nível reduz 4% da recarga da habilidade e fortalece algumas especialidades.
+SISTEMAS IMPLEMENTADOS
+- As 25 classes e suas melhorias pagas continuam disponíveis; o Líder foi removido e a Segurança substitui o nome antigo Vigia.
+- Melhorias pagas reduzem a recarga da habilidade em 4% por nível e reforçam benefícios específicos.
+- Médico: kit médico inicial, chance-base de erro de 50% nos procedimentos e puzzles mais fáceis.
+- Socorrista: chance-base de erro de 60%, 90% do benefício médico, velocidade e puzzles mais fáceis; indica aliados abaixo de 30% de vida.
+- Soldado: bônus de dano, habilidade existente e chance de arma especial em instalações militares.
+- Batedor: moto policial e chances especiais de armas em postos policiais/bases militares.
+- Catálogo com 61 espécies de fauna; uma parte aparece por expedição e animais se movem pelo mapa.
+- Agricultor pode domesticar animais, montar cavalos/burros e administrar a agropecuária.
+- Explorador, Agricultor, Cozinheiro e Cientista podem colher recursos silvestres.
+- Cozinheiro: fogueira e cozinha portátil para preparar folhas, frutas, cogumelos, ervas e carne.
+- Engenheiro: armadilhas, escutas, bancada e construções de campo.
+- Carpinteiro: projetos de madeira no campo e desconto de materiais.
+- Cientista: estação de pesquisa portátil e desenvolvimento de cura antiviral fictícia dentro do jogo.
+- Caçador: mira de caça conectada aos disparos, rastreio e obtenção de carne.
+- Navegador: barco e mecânica 2D de travessia de rios, lagos e áreas oceânicas.
+- Híbrido: mordida de vampiro/lobisomem completa a forma correspondente. Vampiro recebe invisibilidade contra monstros, visão noturna e recurso de sangue; lobisomem recebe visão noturna, velocidade e dano de garras.
+- Manequim Universal: ajustes por classe, item e pose (parado, andando e atacando), com marcação para equipar item/arma na mão.
 
-LIMITES IMPORTANTES
-- O ajuste automático do manequim usa sugestões predefinidas por classe; não é uma IA externa que aprende ou simula fisicamente todos os esqueletos.
-- A mira do Caçador é uma sobreposição de luneta no canvas; permite acertar animais, mas não é uma câmera 3D em primeira pessoa.
-- A fauna é um sistema 2D de exploração; as 61 espécies estão catalogadas, mas somente uma parte aparece em cada mapa.
-- As estruturas de campo são objetos 2D de jogo; não são um editor de construção 3D livre.
-- A água é uma mecânica 2D de travessia. A travessia longa entre abrigos usa a rota aquática visual quando o Navegador escolhe o barco.
-- Pesquisa e cura são elementos fictícios do jogo.
+EDITOR
+Abra https://estradasdanoite.onrender.com/editor.
+Selecione o item já importado, escolha a classe e a pose, ajuste posição/ângulo/escala e marque “Equipar este item na mão da classe”. Depois use “Salvar e sincronizar”.
+O autoajuste do manequim usa predefinições; não é uma IA autônoma que calcula fisicamente qualquer esqueleto.
+
+LIMITES AINDA EXISTENTES
+- Fauna, água, armas e construção de campo são sistemas 2D integrados ao motor atual, não simulações 3D.
+- A mira do Caçador é uma luneta sobre o canvas, não uma câmera 3D em primeira pessoa.
+- O mapa escolhe uma seleção da fauna disponível; as 61 espécies estão cadastradas, mas não aparecem todas simultaneamente.
+- Os projetos de carpintaria são modelos predefinidos; ainda não existe construção livre de qualquer objeto imaginado.
+- A pesquisa científica implementa uma sequência de recursos/pontos para cura fictícia; não é uma IA geral de experimentação.
+- A mordida transforma a classe Híbrido no estado de forma correspondente dentro da partida; não altera a compra/desbloqueio permanente do perfil.
+- Não foi executado teste completo de gameplay/browser nesta atualização. Os arquivos JavaScript foram validados por análise de sintaxe.
 
 PUBLICAÇÃO
-Depois do commit no GitHub, publique no Render usando:
-Manual Deploy -> Deploy latest commit.
+No Render: Manual Deploy → Deploy latest commit.
+Para sincronizar configurações do editor com o site, o serviço precisa ter EDITOR_TOKEN configurado nas variáveis de ambiente.
