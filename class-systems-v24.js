@@ -156,8 +156,8 @@ function fieldPanel(){
  if(!isEngineer&&!isCarpenter&&!isScientist){say('Construção fora do abrigo: Engenheiro ou Carpinteiro.');return;}
  const root=document.createElement('div');root.id='v24FieldPanel';root.style.cssText='position:fixed;inset:0;z-index:980;background:#071017ed;display:flex;align-items:center;justify-content:center;padding:12px';
  const box=document.createElement('section');box.style.cssText='width:min(620px,97vw);max-height:88vh;overflow:auto;background:#14252d;border:1px solid #8de0c0;border-radius:14px;padding:16px;color:#edf5ef';
- const title=document.createElement('h2');title.textContent=isEngineer?'Oficina de campo · Engenheiro':'Assistente de carpintaria';title.style.margin='0 0 5px';
- const desc=document.createElement('p');desc.textContent=isEngineer?'Escolha uma estrutura, armadilha, escuta ou bancada. Depois clique no terreno para posicionar.':'Escolha um projeto de madeira. O assistente organiza os materiais e prepara a estrutura para posicionamento.';desc.style.cssText='font-size:12px;color:#b9cbc5';
+ const title=document.createElement('h2');title.textContent=isEngineer?'Oficina de campo · Engenheiro':isCarpenter?'Assistente de carpintaria':'Estação científica';title.style.margin='0 0 5px';
+ const desc=document.createElement('p');desc.textContent=isEngineer?'Escolha uma estrutura, armadilha, escuta ou bancada. Depois clique no terreno para posicionar.':isCarpenter?'Escolha um projeto de madeira. O assistente organiza os materiais e prepara a estrutura para posicionamento.':'Construa uma estação portátil para estudar amostras e reduzir o custo da pesquisa quando estiver por perto.';desc.style.cssText='font-size:12px;color:#b9cbc5';
  const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px';
  const list=BLUEPRINTS.filter(b=>isEngineer?b.group!=='scientist':isCarpenter?b.group==='wood':b.group==='scientist');
  for(const bp of list){
@@ -256,7 +256,7 @@ function researchPanel(){
  const h=document.createElement('h2');h.textContent='Laboratório portátil';h.style.margin='0 0 5px';
  const p=document.createElement('p');p.textContent='Amostras da floresta, componentes e medicamentos podem ser analisados para desenvolver a cura fictícia do jogo.';p.style.cssText='font-size:12px;color:#c0d0cb';
  const station=activeStructures(s).find(o=>o.type==='research_station'&&sameRegion(s,o)&&Math.hypot(o.x-s.player.x,o.y-s.player.y)<120),points=Number(s.v24ResearchPoints)||0,sample=Number(s.tools?.antiviralSample)||0,parts=Number(s.parts)||0,medicine=Number(s.medicine)||0,researchCost=Math.max(65,100-upgradeLevel()*5-(station?20:0)),partsCost=Math.max(2,3-Math.floor(upgradeLevel()/2)-(station?1:0));
- const info=document.createElement('p');info.textContent='Pesquisa: '+points+'/100 · Amostras: '+sample+' · Componentes: '+parts+' · Medicamentos: '+medicine;
+ const info=document.createElement('p');info.textContent='Pesquisa: '+points+'/100 · Amostras: '+sample+' · Componentes: '+parts+' · Medicamentos: '+medicine+(station?' · Estação próxima: desconto ativo':'');
  const grid=document.createElement('div');grid.style.cssText='display:grid;gap:8px';
  const study=document.createElement('button');study.textContent='Estudar amostra · +20 pesquisa';study.className='btn';study.disabled=sample<1;study.onclick=()=>{s.tools.antiviralSample--;s.v24ResearchPoints=Math.min(100,(s.v24ResearchPoints||0)+20);say('Amostra analisada. Pesquisa: '+s.v24ResearchPoints+'/100.');save();root.remove();};
  const cure=document.createElement('button');cure.textContent='Desenvolver cura antiviral · '+researchCost+' pesquisa, 1 amostra, '+partsCost+' componentes e 1 medicamento';cure.className='btn gold';cure.disabled=points<researchCost||sample<1||parts<partsCost||medicine<1;cure.onclick=()=>{s.v24ResearchPoints-=researchCost;s.tools.antiviralSample--;s.parts-=partsCost;s.medicine--;if(s.player.infection)s.player.infection=null;s.v24CuredViruses=(s.v24CuredViruses||0)+1;say('Cura antiviral desenvolvida e aplicada.');save();root.remove();};
@@ -266,7 +266,7 @@ function farmPanel(){
  const s=state();if(!s||role()!=='farmer'){say('A agropecuária é administrada pelo Agricultor.');return;}
  const animals=farmList(s),root=document.createElement('div');root.id='v24FarmPanel';root.style.cssText='position:fixed;inset:0;z-index:980;background:#071017ed;display:flex;align-items:center;justify-content:center;padding:12px';
  const box=document.createElement('section');box.style.cssText='width:min(540px,96vw);max-height:85vh;overflow:auto;background:#193027;border:1px solid #9bc58a;border-radius:14px;padding:16px;color:#fff';
- const h=document.createElement('h2');h.textContent='Agropecuária';h.style.margin='0 0 8px';const desc=document.createElement('p');desc.textContent='Animais domesticados produzem recursos ao longo das noites. Cavalos e burros podem ser montados com M.';desc.style.cssText='font-size:12px;color:#c7d9c4';
+ const h=document.createElement('h2');h.textContent='Agropecuária';h.style.margin='0 0 8px';const desc=document.createElement('p');desc.textContent='Animais domesticados produzem recursos ao longo das noites. Use V para montar ou desmontar cavalos e burros.';desc.style.cssText='font-size:12px;color:#c7d9c4';
  const list=document.createElement('div');list.style.cssText='display:grid;gap:6px';
  if(!animals.length){const empty=document.createElement('p');empty.textContent='Nenhum animal domesticado. Explore a floresta e aproxime-se de um animal para oferecer comida.';list.append(empty);}
  for(const a of animals){const row=document.createElement('div');row.style.cssText='padding:9px;border:1px solid #63826a;border-radius:8px;background:#213e30';row.textContent=a.icon+' '+a.name+' · vínculo '+a.trust+'%'+(a.mountable?' · montável':'');list.append(row);}
@@ -385,7 +385,7 @@ bridge.wrap('movePlayer',old=>function(dt,...args){
 });
 bridge.wrap('update',old=>function(dt,...args){const result=old(dt,...args),s=state();updateWorld(dt,s);return result;});
 bridge.wrap('render',old=>function(...args){
- const result=old(...args),s=state(),ctx=bridge.getCanvasContext();if(ctx&&s){drawWildlife(ctx,s);drawField(ctx,s);}
+ const result=old(...args),s=state(),ctx=bridge.getCanvasContext();if(ctx&&s){drawWildlife(ctx,s);drawField(ctx,s);if(['scavenge','base'].includes(s.mode))bridge.getFn('drawPlayer')?.();}
  if(ctx&&s?.mode==='travel'&&s.player?.vehicleId==='boat'){
   const p=s.player;ctx.save();ctx.fillStyle='#1b6786e8';ctx.fillRect(0,ctx.canvas.height/2-72,ctx.canvas.width,144);
   ctx.strokeStyle='#a5d8e1';ctx.lineWidth=2;
@@ -409,8 +409,8 @@ document.addEventListener('keydown',ev=>{
  if(ev.repeat)return;
  const key=ev.key.toLowerCase(),id=role();
  if(key==='e'&&nearestWorldThing(s)){ev.preventDefault();ev.stopImmediatePropagation();handleNear();return;}
- if(key==='m'&&id==='farmer'){ev.preventDefault();ev.stopImmediatePropagation();const p=s.player,animals=farmList(s).filter(a=>a.mountable);if(p.v24MountedAnimal){p.v24MountedAnimal=null;say('Você desmontou.');}else if(animals.length){p.v24MountedAnimal=animals[0].id;say('Você montou '+animals[0].name+'.');}else say('Domestique um cavalo ou burro primeiro.');save();return;}
- if(key==='b'&&s.mode==='scavenge'&&['engineer','carpenter'].includes(id)){ev.preventDefault();ev.stopImmediatePropagation();fieldPanel();return;}
+ if(key==='v'&&id==='farmer'){ev.preventDefault();ev.stopImmediatePropagation();const p=s.player,animals=farmList(s).filter(a=>a.mountable);if(p.v24MountedAnimal){p.v24MountedAnimal=null;say('Você desmontou.');}else if(animals.length){p.v24MountedAnimal=animals[0].id;say('Você montou '+animals[0].name+'.');}else say('Domestique um cavalo ou burro primeiro.');save();return;}
+ if(key==='b'&&s.mode==='scavenge'&&['engineer','carpenter','scientist'].includes(id)){ev.preventDefault();ev.stopImmediatePropagation();fieldPanel();return;}
  if(key==='c'&&id==='cook'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();cookPanel();return;}
  if(key==='x'&&id==='scientist'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();researchPanel();return;}
  if(key==='j'&&id==='farmer'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();farmPanel();return;}
