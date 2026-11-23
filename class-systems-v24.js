@@ -145,20 +145,21 @@ const BLUEPRINTS=[
  {id:'field_trap',label:'Armadilha de animais',icon:'🪤',cost:{wood:3,branch:2},group:'engineer'},
  {id:'listening_post',label:'Escuta de campo',icon:'📡',cost:{wood:3,parts:2,battery:1},group:'engineer'},
  {id:'field_bench',label:'Bancada portátil',icon:'🧰',cost:{wood:5,bolts:2},group:'engineer'},
- {id:'field_lamp',label:'Luminária de campo',icon:'🔦',cost:{wood:2,parts:1,battery:1},group:'engineer'}
+ {id:'field_lamp',label:'Luminária de campo',icon:'🔦',cost:{wood:2,parts:1,battery:1},group:'engineer'},
+ {id:'research_station',label:'Estação científica portátil',icon:'🔬',cost:{wood:5,parts:4,scrap:4,battery:2},group:'scientist'}
 ];
 function haveCost(s,cost){return Object.entries(cost).every(([k,v])=>(Number(s[k])||0)>=v);}
 function payCost(s,cost){for(const [k,v] of Object.entries(cost))s[k]=Math.max(0,(Number(s[k])||0)-v);}
 function fieldPanel(){
  const s=state(),id=role();if(!s)return;
- const isEngineer=id==='engineer',isCarpenter=id==='carpenter';
- if(!isEngineer&&!isCarpenter){say('Construção fora do abrigo: Engenheiro ou Carpinteiro.');return;}
+ const isEngineer=id==='engineer',isCarpenter=id==='carpenter',isScientist=id==='scientist';
+ if(!isEngineer&&!isCarpenter&&!isScientist){say('Construção fora do abrigo: Engenheiro ou Carpinteiro.');return;}
  const root=document.createElement('div');root.id='v24FieldPanel';root.style.cssText='position:fixed;inset:0;z-index:980;background:#071017ed;display:flex;align-items:center;justify-content:center;padding:12px';
  const box=document.createElement('section');box.style.cssText='width:min(620px,97vw);max-height:88vh;overflow:auto;background:#14252d;border:1px solid #8de0c0;border-radius:14px;padding:16px;color:#edf5ef';
  const title=document.createElement('h2');title.textContent=isEngineer?'Oficina de campo · Engenheiro':'Assistente de carpintaria';title.style.margin='0 0 5px';
  const desc=document.createElement('p');desc.textContent=isEngineer?'Escolha uma estrutura, armadilha, escuta ou bancada. Depois clique no terreno para posicionar.':'Escolha um projeto de madeira. O assistente organiza os materiais e prepara a estrutura para posicionamento.';desc.style.cssText='font-size:12px;color:#b9cbc5';
  const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px';
- const list=BLUEPRINTS.filter(b=>isEngineer||b.group==='wood');
+ const list=BLUEPRINTS.filter(b=>isEngineer?b.group!=='scientist':isCarpenter?b.group==='wood':b.group==='scientist');
  for(const bp of list){
   const btn=document.createElement('button');btn.type='button';btn.style.cssText='text-align:left;padding:11px;border-radius:9px;background:#1c3940;color:#fff;border:1px solid #55766d';
   btn.textContent=bp.icon+' '+bp.label+' · '+Object.entries(bp.cost).map(([k,v])=>v+' '+({wood:'madeira',stone:'pedra',bolts:'parafusos',branch:'galhos',parts:'componentes',battery:'bateria'}[k]||k)).join(', ');
@@ -172,16 +173,39 @@ function buildAt(x,y){
  const s=state(),id=role(),bp=BLUEPRINTS.find(v=>v.id===window.__OITO_V24_PENDING_BUILD__);
  if(!s||!bp)return false;
  if(s.mode!=='scavenge'){say('As estruturas de campo são posicionadas durante a exploração.');return false;}
- if(bp.group==='wood'&&id!=='carpenter'||bp.group!=='wood'&&id!=='engineer'){say('Esta classe não pode construir esse projeto.');return false;}
- if(!haveCost(s,bp.cost)){say('Materiais insuficientes para '+bp.label+'.');return false;}
+ if(bp.group==='wood'&&id!=='carpenter'||bp.group==='engineer'&&id!=='engineer'||bp.group==='scientist'&&id!=='scientist'){say('Esta classe não pode construir esse projeto.');return false;}
+ const discount=(id==='engineer'||(id==='carpenter'&&bp.group==='wood'))?.7:1;
+ const actualCost=Object.fromEntries(Object.entries(bp.cost).map(([k,v])=>[k,discount===1?v:Math.max(1,Math.round(v*discount))]));
+ if(!haveCost(s,actualCost)){say('Materiais insuficientes para '+bp.label+'.');return false;}
  if((s.outsideMap.buildings||[]).some(b=>Math.abs(x-b.x)<(b.w||80)*.55+30&&Math.abs(y-b.y)<(b.h||70)*.55+30)){say('Escolha um terreno livre, longe das construções.');return false;}
  if(activeStructures(s).some(o=>Math.hypot(o.x-x,o.y-y)<48)){say('Há outra estrutura muito próxima.');return false;}
- payCost(s,bp.cost);
+ payCost(s,actualCost);
  const item={id:'v24_'+bp.id+'_'+now(),type:bp.id,x,y,hp:bp.id==='wood_shelter'?260:120,maxHp:bp.id==='wood_shelter'?260:120,region:regionId(s),createdAt:now(),readyAt:now()+45000};
  activeStructures(s).push(item);window.__OITO_V24_PENDING_BUILD__=null;say(bp.label+' construído.');save();return true;
 }
 const vehicles=bridge.getVehicles();if(!vehicles.some(v=>v.id==='boat'))vehicles.push({id:'boat',name:'Barco de travessia',cost:999999,speed:245,description:'Embarcação do Navegador · travessia de rios, lagos e mar.'});
 bridge.wrap('getVehicle',old=>function(id){const v=old(id),p=state()?.player;if(id==='boat'&&role()==='navigator'){const skill=p?.v23NavigationUntil>Date.now()?1.25:1;return {...v,speed:Math.round(v.speed*skill*(1+upgradeLevel()*.04))};}return v;});
+
+bridge.wrap('firePlayer',old=>function(...args){
+ const s=state(),p=s?.player,before=Number(p?.shootCd)||0,result=old(...args);
+ const fired=p&&before<=0&&(Number(p.shootCd)||0)>0;
+ if(!fired||role()!=='hunter'||s.mode!=='scavenge'||!s.outsideMap||(!p.v24Scoped&&!p.huntingMode))return result;
+ const weapon=bridge.getFn('getWeapon')?.(p.weaponId),range=Math.min(Number(weapon?.range)||500,900),angle=Number(p.attackAngle)||0;
+ const damage=Number(bridge.getFn('weaponDamage')?.())||Number(weapon?.damage)||10;
+ const targets=(s.outsideMap.wildlife||[]).filter(a=>!a.tamed&&a.hp>0).map(a=>{
+  const dx=a.x-p.x,dy=a.y-p.y,d=Math.hypot(dx,dy),targetAngle=Math.atan2(dy,dx),diff=Math.abs(Math.atan2(Math.sin(targetAngle-angle),Math.cos(targetAngle-angle)));
+  return {a,d,diff};
+ }).filter(v=>v.d<=range&&v.diff<Math.max(.065,Number(weapon?.spread)||.02)+.055).sort((x,y)=>x.d-y.d);
+ const hit=targets[0];if(!hit)return result;
+ hit.a.hp-=damage;hit.a.alert=5;hit.a.targetX=clamp(hit.a.x+(hit.a.x-p.x)*.8,30,970);hit.a.targetY=clamp(hit.a.y+(hit.a.y-p.y)*.8,30,570);
+ if(hit.a.hp<=0){
+  s.outsideMap.wildlife=s.outsideMap.wildlife.filter(v=>v!==hit.a);
+  s.food=Math.min(99,(s.food||0)+2);s.v24CookIngredients=s.v24CookIngredients||{};s.v24CookIngredients.meat=(s.v24CookIngredients.meat||0)+1;
+  say(hit.a.name+' caçado. Você recebeu 2 porções e 1 carne crua para cozinhar.');
+ }else say('Acerto em '+hit.a.name+'. Continue no modo de caça para rastrear o animal.');
+ save();return result;
+});
+
 const canvas=bridge.getCanvasContext()?.canvas;
 if(canvas){
  canvas.addEventListener('pointerdown',ev=>{
@@ -210,6 +234,7 @@ function cookPanel(){
  const info=document.createElement('p');info.textContent='Frutas: '+(inv.fruit||0)+' · Frutas silvestres: '+(inv.berries||0)+' · Folhas: '+(inv.leaves||0)+' · Ervas: '+(inv.herbs||0)+' · Cogumelos: '+(inv.mushrooms||0)+' · Comida: '+(s.food||0);
  const grid=document.createElement('div');grid.style.cssText='display:grid;gap:8px';
  const recipes=[
+  {name:'Ensopado de carne',need:{meat:1,leaves:1},text:'1 carne crua + 1 folha',meal:1},
   {name:'Ensopado de folhas',need:{leaves:2,food:1},text:'2 folhas + 1 porção de comida',meal:1},
   {name:'Frutas assadas',need:{fruit:2},text:'2 frutas maduras',meal:1},
   {name:'Caldo de cogumelos',need:{mushrooms:2,leaves:1},text:'2 cogumelos + 1 folha',meal:1},
@@ -230,7 +255,7 @@ function researchPanel(){
  const box=document.createElement('section');box.style.cssText='width:min(520px,96vw);background:#162b35;border:1px solid #8de0c0;border-radius:14px;padding:16px;color:#fff';
  const h=document.createElement('h2');h.textContent='Laboratório portátil';h.style.margin='0 0 5px';
  const p=document.createElement('p');p.textContent='Amostras da floresta, componentes e medicamentos podem ser analisados para desenvolver a cura fictícia do jogo.';p.style.cssText='font-size:12px;color:#c0d0cb';
- const points=Number(s.v24ResearchPoints)||0,sample=Number(s.tools?.antiviralSample)||0,parts=Number(s.parts)||0,medicine=Number(s.medicine)||0,researchCost=Math.max(85,100-upgradeLevel()*5),partsCost=Math.max(2,3-Math.floor(upgradeLevel()/2));
+ const station=activeStructures(s).find(o=>o.type==='research_station'&&sameRegion(s,o)&&Math.hypot(o.x-s.player.x,o.y-s.player.y)<120),points=Number(s.v24ResearchPoints)||0,sample=Number(s.tools?.antiviralSample)||0,parts=Number(s.parts)||0,medicine=Number(s.medicine)||0,researchCost=Math.max(65,100-upgradeLevel()*5-(station?20:0)),partsCost=Math.max(2,3-Math.floor(upgradeLevel()/2)-(station?1:0));
  const info=document.createElement('p');info.textContent='Pesquisa: '+points+'/100 · Amostras: '+sample+' · Componentes: '+parts+' · Medicamentos: '+medicine;
  const grid=document.createElement('div');grid.style.cssText='display:grid;gap:8px';
  const study=document.createElement('button');study.textContent='Estudar amostra · +20 pesquisa';study.className='btn';study.disabled=sample<1;study.onclick=()=>{s.tools.antiviralSample--;s.v24ResearchPoints=Math.min(100,(s.v24ResearchPoints||0)+20);say('Amostra analisada. Pesquisa: '+s.v24ResearchPoints+'/100.');save();root.remove();};
@@ -241,7 +266,7 @@ function farmPanel(){
  const s=state();if(!s||role()!=='farmer'){say('A agropecuária é administrada pelo Agricultor.');return;}
  const animals=farmList(s),root=document.createElement('div');root.id='v24FarmPanel';root.style.cssText='position:fixed;inset:0;z-index:980;background:#071017ed;display:flex;align-items:center;justify-content:center;padding:12px';
  const box=document.createElement('section');box.style.cssText='width:min(540px,96vw);max-height:85vh;overflow:auto;background:#193027;border:1px solid #9bc58a;border-radius:14px;padding:16px;color:#fff';
- const h=document.createElement('h2');h.textContent='Agropecuária';h.style.margin='0 0 8px';const desc=document.createElement('p');desc.textContent='Animais domesticados produzem recursos ao longo das noites. Cavalos e burros podem ser montados.';desc.style.cssText='font-size:12px;color:#c7d9c4';
+ const h=document.createElement('h2');h.textContent='Agropecuária';h.style.margin='0 0 8px';const desc=document.createElement('p');desc.textContent='Animais domesticados produzem recursos ao longo das noites. Cavalos e burros podem ser montados com M.';desc.style.cssText='font-size:12px;color:#c7d9c4';
  const list=document.createElement('div');list.style.cssText='display:grid;gap:6px';
  if(!animals.length){const empty=document.createElement('p');empty.textContent='Nenhum animal domesticado. Explore a floresta e aproxime-se de um animal para oferecer comida.';list.append(empty);}
  for(const a of animals){const row=document.createElement('div');row.style.cssText='padding:9px;border:1px solid #63826a;border-radius:8px;background:#213e30';row.textContent=a.icon+' '+a.name+' · vínculo '+a.trust+'%'+(a.mountable?' · montável':'');list.append(row);}
@@ -251,9 +276,9 @@ function drawField(ctx,s){
  const entries=[...(s.v24BaseStructures||[]),...(s.outsideMap?.fieldStructures||[])].filter(o=>sameRegion(s,o));
  for(const o of entries){
   ctx.save();ctx.translate(o.x,o.y);
-  const ico=o.type==='campfire'?'🔥':o.type==='field_trap'?'🪤':o.type==='listening_post'?'📡':o.type==='field_bench'?'🧰':o.type==='field_lamp'?'🔦':o.type==='wood_bridge'?'🌉':o.type==='wood_shelter'?'🏕️':o.type==='wood_watch'?'🗼':o.type==='wood_storage'?'📦':'🪵';
+  const ico=o.type==='campfire'?'🔥':o.type==='field_trap'?'🪤':o.type==='listening_post'?'📡':o.type==='research_station'?'🔬':o.type==='field_bench'?'🧰':o.type==='field_lamp'?'🔦':o.type==='wood_bridge'?'🌉':o.type==='wood_shelter'?'🏕️':o.type==='wood_watch'?'🗼':o.type==='wood_storage'?'📦':'🪵';
   ctx.fillStyle='#07120dbb';ctx.beginPath();ctx.ellipse(0,9,17,7,0,0,Math.PI*2);ctx.fill();ctx.font='23px system-ui';ctx.textAlign='center';ctx.fillText(ico,0,5);
-  if(o.type==='listening_post'&&o.scanUntil>now()){ctx.strokeStyle='#8de0c0aa';ctx.beginPath();ctx.arc(0,0,45,0,Math.PI*2);ctx.stroke();}
+  if(o.type==='listening_post'&&o.scanUntil>now()){ctx.strokeStyle=o.detected?.length?'#ff987aaa':'#8de0c0aa';ctx.beginPath();ctx.arc(0,0,45,0,Math.PI*2);ctx.stroke();}
   ctx.restore();
  }
 }
@@ -292,7 +317,12 @@ function updateWorld(dt,s){
    if(len>5){a.x+=dx/len*Math.min(step,len);a.y+=dy/len*Math.min(step,len);}
   }
   for(const o of s.outsideMap.fieldStructures||[])if(o.type==='field_trap'&&now()>(o.readyAt||Infinity)){o.readyAt=now()+90000;o.caught=(o.caught||0)+1;s.food=Math.min(99,(s.food||0)+1);say('Uma armadilha de campo encontrou alimento.');}
-  for(const o of s.outsideMap.fieldStructures||[])if(o.type==='listening_post')o.scanUntil=now()+5000;
+  for(const o of s.outsideMap.fieldStructures||[])if(o.type==='listening_post'&&now()>(o.nextScanAt||0)){
+   o.nextScanAt=now()+5000;o.scanUntil=now()+1800;
+   const threats=(s.exploreMonsters||[]).filter(m=>Math.hypot(m.x-o.x,m.y-o.y)<190);
+   o.detected=threats.map(m=>m.type||'ameaça');
+   if(threats.length&&now()-(o.lastNotice||0)>12000){o.lastNotice=now();say('Escuta de campo detectou movimento hostil nas proximidades!');}
+  }
  }
 }
 let lastProductNight=-1;
@@ -341,7 +371,7 @@ bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||
 bridge.wrap('movePlayer',old=>function(dt,...args){
  const s=state(),p=s?.player;if(!p)return old(dt,...args);
  const speed=p.speed,mounted=!!p.v24MountedAnimal;
- if(mounted&&role()==='farmer')p.speed=speed*(1.25+upgradeLevel()*.015);
+ if(mounted&&role()==='farmer')p.speed=speed*(1.25+upgradeLevel()*.015);else if(role()==='explorer')p.speed=speed*1.15;
  const before={x:p.x,y:p.y},crossing=p.v24CrossingAt>Date.now();
  try{
   const result=old(dt,...args),w=s.mode==='scavenge'?s.outsideMap?.waterway:null;
