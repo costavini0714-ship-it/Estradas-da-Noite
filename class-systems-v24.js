@@ -8,7 +8,7 @@ if(!API||!bridge){console.error('[v24] APIs principais indisponíveis.');return;
 window.__OITO_V24_INSTALLED__=true;
 const $=id=>document.getElementById(id),state=()=>bridge.getState();
 const profile=()=>API.profile?.()||{selected:'survivor'};
-const role=()=>String(profile().selected||state()?.player?.classId||'survivor');
+const role=()=>{const selected=String(profile().selected||state()?.player?.classId||'survivor'),form=state()?.player?.v24HybridForm;return selected==='hybrid'&&['hybrid_vampire','hybrid_werewolf'].includes(form)?form:selected;};
 const upgradeLevel=()=>clamp(Number(API.getClassUpgradeLevel?.(role()))||0,0,3);
 const say=m=>bridge.getFn('say')?.(m);
 const save=()=>{bridge.getFn('updateUI')?.();bridge.getFn('saveGame')?.(false);};
@@ -343,7 +343,7 @@ function applyFarmProduction(s){
 }
 bridge.wrap('freshState',old=>function(...args){
  const s=old(...args),id=role();s.v24FarmAnimals=[];s.v24CookIngredients={berries:0,fruit:0,leaves:0,herbs:0,mushrooms:0,seeds:0};s.v24CookedMeals=0;s.v24ResearchPoints=0;s.v24CuredViruses=0;s.v24FarmProducts={eggs:0,feathers:0};s.v24BaseStructures=s.v24BaseStructures||[];
- if(s.player){s.player.classId=id;s.player.v24MountedAnimal=null;}
+ if(s.player){s.player.classId=id;s.player.v24MountedAnimal=null;if(['hybrid','hybrid_vampire','hybrid_werewolf'].includes(id)){s.player.v24HybridForm=id==='hybrid'?'':id;s.player.v24HybridComplete=id!=='hybrid';s.player.v24Blood=Number(s.player.v24Blood)||3;} }
  const hand=bridge.getEditorConfig()?.universalRig?.handItems?.[id];
  if(hand?.kind==='weapon'&&bridge.getWeapons().some(w=>w.id===hand.id)){
   s.player.ownedWeapons=s.player.ownedWeapons||['club'];if(!s.player.ownedWeapons.includes(hand.id))s.player.ownedWeapons.push(hand.id);s.player.weaponId=hand.id;
@@ -376,11 +376,42 @@ bridge.wrap('useMedicine',old=>function(...args){
  if(id==='medic'&&p.hp>before)p.hp=Math.min(p.maxHp,before+Math.round((p.hp-before)*(.2+upgradeLevel()*.03)));
  save();return result;
 });
-bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||0;return Math.round(d*(role()==='soldier'?1.18+upgradeLevel()*.04:role()==='watchman'?1+upgradeLevel()*.025:1));});
+
+bridge.wrap('damagePlayer',old=>function(...args){
+ const s=state(),p=s?.player,selected=String(profile().selected||'survivor'),source=String(args[1]||'').toLowerCase();
+ const before=Number(p?.hp)||0,result=old(...args);
+ if(!p||before<=0||p.hp<=0)return result;
+ const bittenByVampire=source.includes('vampire'),bittenByWolf=source.includes('werewolf');
+ if(selected==='hybrid'&&(bittenByVampire||bittenByWolf)&&!p.v24HybridComplete){
+  p.v24HybridForm=bittenByVampire?'hybrid_vampire':'hybrid_werewolf';
+  p.v24HybridComplete=true;p.v24NightVision=true;
+  if(bittenByVampire){p.v23InvisibleUntil=Number.MAX_SAFE_INTEGER;p.v24Blood=Math.max(3,Number(p.v24Blood)||0);}
+  else{p.v23ClawsUntil=Number.MAX_SAFE_INTEGER;p.v23SpeedUntil=Number.MAX_SAFE_INTEGER;}
+  say(bittenByVampire?'A transformação vampírica foi completada. Visão noturna e invisibilidade permanentes. Use Y para consumir sangue.':'A transformação lupina foi completada. Visão noturna, garras e velocidade foram despertadas.');
+  save();
+ }else if(selected==='hybrid_vampire'&&bittenByVampire&&!p.v24HybridComplete){
+  p.v24HybridComplete=true;p.v24NightVision=true;p.v23InvisibleUntil=Number.MAX_SAFE_INTEGER;say('A linhagem vampírica foi completada.');save();
+ }else if(selected==='hybrid_werewolf'&&bittenByWolf&&!p.v24HybridComplete){
+  p.v24HybridComplete=true;p.v24NightVision=true;p.v23ClawsUntil=Number.MAX_SAFE_INTEGER;p.v23SpeedUntil=Number.MAX_SAFE_INTEGER;say('A linhagem lupina foi completada.');save();
+ }
+ return result;
+});
+bridge.wrap('defeatEnemy',old=>function(...args){
+ const result=old(...args),p=state()?.player;
+ if(role()==='hybrid_vampire'&&p){p.v24Blood=Math.min(99,(Number(p.v24Blood)||0)+1);v24BloodHud();save();}
+ return result;
+});
+function v24BloodHud(){
+ const s=state(),id=role(),p=s?.player;
+ let el=$('v24BloodHud');if(!el){el=document.createElement('div');el.id='v24BloodHud';el.style.cssText='position:fixed;right:14px;bottom:14px;z-index:80;padding:7px 10px;border:1px solid #8f4b55;border-radius:9px;background:#210d16e8;color:#ffe4e7;font:800 12px system-ui;pointer-events:none;display:none';document.body.append(el);}
+ el.style.display=id==='hybrid_vampire'?'block':'none';if(id==='hybrid_vampire')el.textContent='🩸 Sangue: '+(p?.v24Blood||0)+' · Y para consumir';
+}
+
+bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||0;return Math.round(d*(role()==='soldier'?1.18+upgradeLevel()*.04:role()==='watchman'?1+upgradeLevel()*.025:role()==='hybrid_werewolf'?1.35+upgradeLevel()*.03:role()==='hybrid_vampire'?1.08:1));});
 bridge.wrap('movePlayer',old=>function(dt,...args){
  const s=state(),p=s?.player;if(!p)return old(dt,...args);
  const speed=p.speed,mounted=!!p.v24MountedAnimal;
- if(mounted&&role()==='farmer')p.speed=speed*(1.25+upgradeLevel()*.015);else if(role()==='explorer')p.speed=speed*1.15;
+ if(mounted&&role()==='farmer')p.speed=speed*(1.25+upgradeLevel()*.015);else if(role()==='explorer')p.speed=speed*1.15;else if(role()==='hybrid_werewolf')p.speed=speed*(1.18+upgradeLevel()*.02);else if(role()==='hybrid_vampire')p.speed=speed*(1.18+upgradeLevel()*.02);
  const before={x:p.x,y:p.y},crossing=p.v24CrossingAt>Date.now();
  try{
   const result=old(dt,...args),w=s.mode==='scavenge'?s.outsideMap?.waterway:null;
@@ -392,7 +423,8 @@ bridge.wrap('movePlayer',old=>function(dt,...args){
   return result;
  }finally{p.speed=speed;}
 });
-bridge.wrap('update',old=>function(dt,...args){const result=old(dt,...args),s=state();updateWorld(dt,s);return result;});
+bridge.wrap('update',old=>function(dt,...args){const result=old(dt,...args),s=state();updateWorld(dt,s);if(s?.player?.v24NightVision)v24NightHud();v24BloodHud();return result;});
+function v24NightHud(){const s=state(),active=!!s?.player?.v24NightVision&&s?.dayPhase==='night';let el=$('v24NightVisionHud');if(!el){el=document.createElement('div');el.id='v24NightVisionHud';el.style.cssText='position:fixed;left:14px;bottom:14px;z-index:80;padding:6px 9px;border:1px solid #8fcf9a;border-radius:8px;background:#0d2118dd;color:#c5f0c6;font:800 11px system-ui;pointer-events:none;display:none';document.body.append(el);}el.style.display=active?'block':'none';el.textContent='🌙 Visão noturna ativada';}
 bridge.wrap('render',old=>function(...args){
  const result=old(...args),s=state(),ctx=bridge.getCanvasContext();if(ctx&&s){drawWildlife(ctx,s);drawField(ctx,s);if(['scavenge','base'].includes(s.mode))bridge.getFn('drawPlayer')?.();}
  if(ctx&&s?.mode==='travel'&&s.player?.vehicleId==='boat'){
@@ -425,6 +457,7 @@ document.addEventListener('keydown',ev=>{
  if(key==='j'&&id==='farmer'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();farmPanel();return;}
  if(key==='f'&&id==='cook'&&(s.v24CookedMeals||0)>0&&s.hunger<99){ev.preventDefault();ev.stopImmediatePropagation();s.v24CookedMeals--;s.hunger=Math.min(100,s.hunger+Math.round(45*(1.2+upgradeLevel()*.04)));say('Refeição preparada consumida. Saciedade +20%. Restam '+s.v24CookedMeals+'.');save();return;}
  if(key==='z'&&id==='hunter'){ev.preventDefault();ev.stopImmediatePropagation();s.player.v24Scoped=!s.player.v24Scoped;say(s.player.v24Scoped?'Mira de caça ativada. Mire antes de disparar.':'Mira de caça desativada.');return;}
+ if(key==='y'&&id==='hybrid_vampire'){ev.preventDefault();ev.stopImmediatePropagation();if((s.player.v24Blood||0)<1){say('Sem sangue armazenado. Derrote uma criatura para obter sangue.');return;}s.player.v24Blood--;s.player.hp=Math.min(s.player.maxHp,s.player.hp+12);s.hunger=Math.min(100,(s.hunger||0)+24);say('Sangue consumido: +12 de vida e +24 de saciedade.');v24BloodHud();save();return;}
 },true);
 if(canvas){
  let aim={x:canvas.width/2,y:canvas.height/2};
