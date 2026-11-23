@@ -502,5 +502,5 @@ window.__OITO_V24_SYSTEMS__={
  classes:{medic:{procedureError:.5},rescuer:{procedureError:.6,medicalSkill:.9},other:{procedureError:.8},soldier:{damageBonus:.18}},
  openFieldBuilder:fieldPanel,openCooking:cookPanel,openResearch:researchPanel,openFarm:farmPanel
 };
-console.info('[Oito Entradas] v24.1: fauna, agropecuária, coleta, cozinha, pesquisa, construção de campo, barco e itens equipáveis no manequim.');
+console.info('[Oito Entradas] v24.7: fauna, agropecuária, coleta, cozinha, pesquisa, construção de campo, barco, caça e transformações híbridas.');
 })();
