@@ -158,6 +158,8 @@ function buildAt(x,y){
  const item={id:'v24_'+bp.id+'_'+now(),type:bp.id,x,y,hp:bp.id==='wood_shelter'?260:120,maxHp:bp.id==='wood_shelter'?260:120,region:regionId(s),createdAt:now(),readyAt:now()+45000};
  activeStructures(s).push(item);window.__OITO_V24_PENDING_BUILD__=null;say(bp.label+' construído.');save();return true;
 }
+const vehicles=bridge.getVehicles();if(!vehicles.some(v=>v.id==='boat'))vehicles.push({id:'boat',name:'Barco de travessia',cost:999999,speed:245,description:'Embarcação do Navegador · travessia de rios, lagos e mar.'});
+bridge.wrap('getVehicle',old=>function(id){const v=old(id),p=state()?.player;if(id==='boat'&&role()==='navigator'&&p?.v23NavigationUntil>Date.now())return {...v,speed:Math.round(v.speed*1.25)};return v;});
 const canvas=bridge.getCanvasContext()?.canvas;
 if(canvas){
  canvas.addEventListener('pointerdown',ev=>{
@@ -260,7 +262,10 @@ function applyFarmProduction(s){
  const animals=farmList(s);if(!animals.length)return;
  let food=0,eggs=0,feathers=0;
  for(const a of animals){if(a.produce==='food')food+=.35;else if(a.produce==='eggs')eggs+=1;else if(a.produce==='feathers')feathers+=1;}
- s.food=Math.min(99,(s.food||0)+Math.floor(food));s.v24FarmProducts=s.v24FarmProducts||{eggs:0,feathers:0};s.v24FarmProducts.eggs+=eggs;s.v24FarmProducts.feathers+=feathers;
+ s.v24FarmProducts=s.v24FarmProducts||{eggs:0,feathers:0,foodRemainder:0};
+ const total=Number(s.v24FarmProducts.foodRemainder||0)+food,whole=Math.floor(total);
+ s.food=Math.min(99,(s.food||0)+whole);s.v24FarmProducts.foodRemainder=total-whole;
+ s.v24FarmProducts.eggs=(s.v24FarmProducts.eggs||0)+eggs;s.v24FarmProducts.feathers=(s.v24FarmProducts.feathers||0)+feathers;
 }
 bridge.wrap('freshState',old=>function(...args){
  const s=old(...args),id=role();s.v24FarmAnimals=[];s.v24CookIngredients={berries:0,fruit:0,leaves:0,herbs:0,mushrooms:0,seeds:0};s.v24CookedMeals=0;s.v24ResearchPoints=0;s.v24CuredViruses=0;s.v24FarmProducts={eggs:0,feathers:0};s.v24BaseStructures=s.v24BaseStructures||[];
@@ -271,7 +276,7 @@ bridge.wrap('freshState',old=>function(...args){
   else for(const b of s.builds.filter(b=>b.type==='bench'))b.level=Math.max(b.level||1,level);
  }
  if(id==='medic'){s.medicine=Math.max(1,Number(s.medicine)||0);s.tools=s.tools||{};s.tools.medkit=1;}
- if(id==='navigator'){s.tools=s.tools||{};s.tools.boatKit=1;s.player.ownedVehicles=s.player.ownedVehicles||['foot'];}
+ if(id==='navigator'){s.tools=s.tools||{};s.tools.boatKit=1;s.player.ownedVehicles=s.player.ownedVehicles||['foot'];if(!s.player.ownedVehicles.includes('boat'))s.player.ownedVehicles.push('boat');s.player.vehicleId='boat';}
  if(id==='cook'){s.tools=s.tools||{};s.tools.cookingPot=1;s.player.hasCookingPot=true;}
  if(id==='farmer'){s.tools=s.tools||{};s.tools.farmingMachete=1;s.tools.pelletRifle=1;}
  if(id==='hunter'){s.player.huntingMode=false;s.player.v24Scoped=false;}
@@ -283,7 +288,15 @@ bridge.wrap('useMedicine',old=>function(...args){
  const id=role(),base=id==='medic'?.5:id==='rescuer'?.6:.8;
  const severity=(p.hp/p.maxHp<.25?.08:0)+(p.infection?.progress>60?.07:0),error=clamp(base+severity,0,.95);
  if(Math.random()<error){s.medicine=Math.max(0,s.medicine-1);say('Procedimento não concluído. O problema exigiu uma nova tentativa. Medicamentos restantes: '+s.medicine+'.');save();return false;}
- const before=p.hp;const result=old(...args);if(id==='medic'&&p.hp>before)p.hp=Math.min(p.maxHp,before+Math.round((p.hp-before)*.2));save();return result;
+ if(id==='rescuer'){
+  s.medicine=Math.max(0,s.medicine-1);
+  const amount=Math.min(38,p.maxHp-p.hp);p.hp+=amount;
+  say('Socorrista: procedimento concluído com 90% do benefício médico · +'+amount+' de vida.');
+  save();return true;
+ }
+ const before=p.hp,result=old(...args);
+ if(id==='medic'&&p.hp>before)p.hp=Math.min(p.maxHp,before+Math.round((p.hp-before)*.2));
+ save();return result;
 });
 bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||0;return Math.round(d*(role()==='soldier'?1.18:1));});
 bridge.wrap('movePlayer',old=>function(dt,...args){const p=state()?.player;if(!p?.v24MountedAnimal)return old(dt,...args);const speed=p.speed;p.speed=speed*1.25;try{return old(dt,...args);}finally{p.speed=speed;}});
@@ -326,6 +339,23 @@ if(canvas){
   return r;
  });
 }
+
+const v24HandImages=new Map();
+function v24Image(url){let img=v24HandImages.get(url);if(!img){img=new Image();img.src=url;img.onload=()=>{};v24HandImages.set(url,img);}return img;}
+bridge.wrap('drawPlayer',old=>function(...args){
+ const result=old(...args),s=state(),p=s?.player;if(!p)return result;
+ const cfg=bridge.getEditorConfig(),id=role(),hand=cfg?.universalRig?.handItems?.[id];if(!hand||!['customItem','lootItem'].includes(hand.kind))return result;
+ const entry=hand.kind==='customItem'?cfg?.customItems?.[hand.id]:cfg?.itemOverrides?.[hand.id],url=entry?.iconImage;
+ if(!url)return result;
+ const img=v24Image(url);if(!img.complete||!img.naturalWidth)return result;
+ const pose=p.attackUntil>performance.now()?'attack':(Math.abs(p.vx||0)+Math.abs(p.vy||0)>.2?'walk':'idle');
+ const key=hand.kind+'::'+hand.id,rig=cfg?.universalRig?.itemOffsets?.[id]?.[key]?.[pose]||cfg?.universalRig?.itemOffsets?.[id]?.[key]?.idle||cfg?.universalRig?.classOffsets?.[id]?.[pose]||cfg?.universalRig?.classOffsets?.[id]?.idle||{};
+ const ctx=bridge.getCanvasContext();if(!ctx)return result;
+ const scale=clamp(Number(rig.scale)||.75,.35,2.5),angle=(Number(rig.angle)||0)*Math.PI/180;
+ ctx.save();ctx.translate(p.x,p.y);ctx.rotate(Number(p.attackAngle)||0);ctx.translate(Number(rig.x??13),Number(rig.y??-10));ctx.rotate(angle);ctx.imageSmoothingEnabled=false;ctx.drawImage(img,-16*scale,-16*scale,32*scale,32*scale);ctx.restore();
+ return result;
+});
+
 window.__OITO_V24_SYSTEMS__={
  fauna:species.map(v=>({id:v.id,name:v.name,kind:v.kind})),
  forage:forageDefs.map(v=>({id:v.id,name:v.name})),
@@ -333,5 +363,5 @@ window.__OITO_V24_SYSTEMS__={
  classes:{medic:{procedureError:.5},rescuer:{procedureError:.6,medicalSkill:.9},other:{procedureError:.8},soldier:{damageBonus:.18}},
  openFieldBuilder:fieldPanel,openCooking:cookPanel,openResearch:researchPanel,openFarm:farmPanel
 };
-console.info('[Oito Entradas] v24.0: fauna, agropecuária, coleta, cozinha portátil, laboratório e construção de campo.');
+console.info('[Oito Entradas] v24.1: fauna, agropecuária, coleta, cozinha, pesquisa, construção de campo, barco e itens equipáveis no manequim.');
 })();
