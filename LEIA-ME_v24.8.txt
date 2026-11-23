@@ -1,0 +1,46 @@
+OITO ENTRADAS — VERSÃO 24.8
+===============================
+
+LINKS
+- Jogo: https://estradasdanoite.onrender.com/
+- Editor: https://estradasdanoite.onrender.com/editor
+
+CONTROLES
+- E: interagir com animais, plantas e travessias de água.
+- B: oficina de campo (Engenheiro/Carpinteiro) ou estação científica (Cientista).
+- C: cozinha portátil (Cozinheiro).
+- X: laboratório (Cientista).
+- J: agropecuária (Agricultor).
+- V: montar/desmontar cavalo ou burro domesticado.
+- Z: ativar/desativar mira de caça (Caçador).
+- Y: consumir sangue na forma vampírica do Híbrido.
+- L: ligar/desligar lanterna (Segurança).
+- F: consumir refeição preparada (Cozinheiro).
+- Q: habilidade especial da classe.
+
+SISTEMAS
+- 25 classes, sem Líder, com Segurança no lugar do nome antigo Vigia e três melhorias pagas por classe.
+- Cada melhoria reduz a recarga da habilidade em 4% e fortalece bônus específicos.
+- Soldado, Batedor, Médico, Socorrista e outras classes mantêm habilidades e atributos prévios e recebem os acréscimos especializados.
+- Catálogo de 61 espécies; uma seleção se movimenta em cada expedição. Agricultor pode domesticar animais e administrar agropecuária.
+- Explorador, Agricultor, Cozinheiro e Cientista podem coletar recursos silvestres.
+- Cozinha portátil com fogueira e receitas de folhas, frutas, cogumelos, ervas e carne.
+- Engenheiro monta armadilhas, escutas, luminárias e estruturas de campo; Carpinteiro constrói projetos de madeira; Cientista monta estação de pesquisa.
+- Caçador usa mira 2D conectada aos disparos e pode caçar fauna.
+- Navegador começa com barco e atravessa rios, lagos e áreas oceânicas no sistema 2D.
+- Híbrido base completa a transformação ao receber mordida vampírica ou lupina. A variante Vampiro começa invisível para a IA de monstros, com visão noturna e sangue; a variante Lobisomem começa com visão noturna, garras e velocidade.
+- Manequim Universal oferece ajustes independentes por classe, item e pose (parado/andando/atacando), com opção de equipar itens desenhados na mão.
+
+LIMITES CONHECIDOS
+- A implementação é 2D, não uma simulação 3D.
+- O manequim usa predefinições e ajustes manuais; não existe IA externa que calcule fisicamente todo esqueleto.
+- A mira do Caçador é uma luneta sobre o canvas, não uma câmera 3D em primeira pessoa.
+- As 61 espécies estão catalogadas, mas só uma parte aparece em cada mapa.
+- A carpintaria oferece projetos predefinidos; não é um construtor livre de qualquer objeto imaginado.
+- O sistema de pesquisa cria uma cura antiviral fictícia usando recursos e pontos de pesquisa; não é uma IA geral de laboratório.
+- As variantes Híbridas têm poderes e a transformação é salva na partida; ela não altera a compra permanente do perfil.
+- Não houve teste completo de gameplay em navegador nesta atualização. Os arquivos JavaScript passaram por verificação de sintaxe.
+
+PUBLICAR NO RENDER
+Abra o Dashboard do Render e execute Manual Deploy → Deploy latest commit.
+O editor precisa da variável EDITOR_TOKEN para salvar configurações no servidor e sincronizá-las com o jogo.
