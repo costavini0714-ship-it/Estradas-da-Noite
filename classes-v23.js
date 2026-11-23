@@ -33,7 +33,7 @@
   if(c.id==='farmer'){c.desc='Começa com ferramentas agrícolas e rifle de pressão; aumenta a produção de alimentos.';c.bonus='+25% de comida obtida em saques; colheitas crescem mais rápido e rendem mais.';}
   if(c.id==='hunter'){c.desc='Rastreador silencioso com rifle de caça e modo de caça pela mira.';c.bonus='Punhos causam +10% de dano e ataque recarrega 8% mais rápido. Camuflagem temporária.';}
   if(c.id==='watchman'){c.name='Segurança';c.icon='🛡️';c.price=280;c.desc='Protege o grupo, usa lanterna na mão livre (tecla L) e possui arma exclusiva rara.';c.bonus='Mantém 18% menos dano durante a noite. Defesa Imbatível: +50% de dano por 5s; recarga 60s.';}
-  if(c.id==='cook'){c.desc='Começa com panela e equipamentos de cozinha; pode preparar refeições fora do abrigo.';c.bonus='Mantém o bônus atual de 35% de saciedade e permite cozinhar folhas e frutas.';}
+  if(c.id==='cook'){c.desc='Começa com panela e equipamentos de cozinha; pode preparar refeições fora do abrigo.';c.bonus='Refeições preparadas recuperam 20% mais saciedade; pode cozinhar folhas, frutas, cogumelos e carne.';}
   if(c.id==='scientist'){c.desc='Pesquisa vírus, remédios e curas. É a única classe que desenvolve curas completas.';c.bonus='Mantém a vantagem existente nos puzzles e acelera pesquisas e análises.';}
  }
  const leader=classes.findIndex(c=>c.id==='leader');if(leader>=0)classes.splice(leader,1);
