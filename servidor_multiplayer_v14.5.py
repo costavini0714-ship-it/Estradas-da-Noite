@@ -118,7 +118,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.wfile.write(body)
                 return
             if parsed.path in ("/healthz", "/health"):
-                body=json.dumps({"status":"ok","version":"22.3"}).encode("utf-8")
+                body=json.dumps({"status":"ok","version":"24.5"}).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
