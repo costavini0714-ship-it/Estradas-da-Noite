@@ -316,7 +316,7 @@ bridge.wrap('freshState',old=>function(...args){
  if(id==='medic'){s.medicine=Math.max(1,Number(s.medicine)||0);s.tools=s.tools||{};s.tools.medkit=1;}
  if(id==='navigator'){s.tools=s.tools||{};s.tools.boatKit=1;s.player.ownedVehicles=s.player.ownedVehicles||['foot'];if(!s.player.ownedVehicles.includes('boat'))s.player.ownedVehicles.push('boat');s.player.vehicleId='boat';}
  if(id==='cook'){s.tools=s.tools||{};s.tools.cookingPot=1;s.player.hasCookingPot=true;}
- if(id==='farmer'){s.tools=s.tools||{};s.tools.farmingMachete=1;s.tools.pelletRifle=1;}
+ if(id==='farmer'){s.tools=s.tools||{};s.tools.farmingMachete=1;s.tools.pelletRifle=1;s.player.ownedWeapons=s.player.ownedWeapons||['fist'];if(!s.player.ownedWeapons.includes('farmer_pellet_rifle'))s.player.ownedWeapons.push('farmer_pellet_rifle');if(!s.player.weaponId||s.player.weaponId==='club'||s.player.weaponId==='fist')s.player.weaponId='farmer_pellet_rifle';}
  if(id==='hunter'){s.player.huntingMode=false;s.player.v24Scoped=false;}
  return s;
 });
@@ -337,7 +337,21 @@ bridge.wrap('useMedicine',old=>function(...args){
  save();return result;
 });
 bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||0;return Math.round(d*(role()==='soldier'?1.18:1));});
-bridge.wrap('movePlayer',old=>function(dt,...args){const p=state()?.player;if(!p?.v24MountedAnimal)return old(dt,...args);const speed=p.speed;p.speed=speed*1.25;try{return old(dt,...args);}finally{p.speed=speed;}});
+bridge.wrap('movePlayer',old=>function(dt,...args){
+ const s=state(),p=s?.player;if(!p)return old(dt,...args);
+ const speed=p.speed,mounted=!!p.v24MountedAnimal;
+ if(mounted&&role()==='farmer')p.speed=speed*1.25;
+ const before={x:p.x,y:p.y},crossing=p.v24CrossingAt>Date.now();
+ try{
+  const result=old(dt,...args),w=s.mode==='scavenge'?s.outsideMap?.waterway:null;
+  if(w&&!crossing){
+   if(w.type==='river'&&p.x>w.x-w.width/2&&p.x<w.x+w.width/2&&Math.abs(p.y-w.bridgeY)>42){p.x=before.x;p.y=before.y;}
+   else if(w.type==='lake'&&((p.x-w.x)/(w.rx||1))**2+((p.y-w.y)/(w.ry||1))**2<1){p.x=before.x;p.y=before.y;}
+   else if(w.type==='ocean'&&Math.abs(p.y-w.y)<w.height/2){p.x=before.x;p.y=before.y;}
+  }
+  return result;
+ }finally{p.speed=speed;}
+});
 bridge.wrap('update',old=>function(dt,...args){const result=old(dt,...args),s=state();updateWorld(dt,s);return result;});
 bridge.wrap('render',old=>function(...args){
  const result=old(...args),s=state(),ctx=bridge.getCanvasContext();if(ctx&&s){drawWildlife(ctx,s);drawField(ctx,s);}
@@ -347,6 +361,7 @@ bridge.wrap('render',old=>function(...args){
   for(let y=ctx.canvas.height/2-55;y<ctx.canvas.height/2+62;y+=27){ctx.beginPath();for(let x=0;x<=ctx.canvas.width;x+=26){const yy=y+Math.sin((x+y+performance.now()/35)/35)*4;if(x===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);}ctx.stroke();}
   ctx.font='26px system-ui';ctx.textAlign='center';ctx.fillText('⛵',p.x,p.y+32);ctx.font='bold 11px system-ui';ctx.fillStyle='#e8f5f5';ctx.fillText('TRAVESSIA AQUÁTICA',ctx.canvas.width/2,ctx.canvas.height/2-82);ctx.restore();
  }
+ if(ctx&&s?.player&&role()==='watchman'&&s.player.v23LanternOn){ctx.save();ctx.font='18px system-ui';ctx.textAlign='center';ctx.fillText('🔦',s.player.x+18,s.player.y+13);ctx.restore();}
  return result;
 });
 bridge.wrap('advanceNight',old=>function(...args){const s=state(),before=Number(s?.nightsSurvived)||0,result=old(...args);if(s&&(Number(s.nightsSurvived)||0)>before)applyFarmProduction(s);return result;});
@@ -368,7 +383,7 @@ document.addEventListener('keydown',ev=>{
  if(key==='c'&&id==='cook'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();cookPanel();return;}
  if(key==='x'&&id==='scientist'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();researchPanel();return;}
  if(key==='j'&&id==='farmer'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();farmPanel();return;}
- if(key==='f'&&id==='cook'&&(s.v24CookedMeals||0)>0&&s.hunger<99){ev.preventDefault();ev.stopImmediatePropagation();s.v24CookedMeals--;s.hunger=Math.min(100,s.hunger+Math.round(35*1.2));say('Refeição preparada consumida. Saciedade +20%. Restam '+s.v24CookedMeals+'.');save();return;}
+ if(key==='f'&&id==='cook'&&(s.v24CookedMeals||0)>0&&s.hunger<99){ev.preventDefault();ev.stopImmediatePropagation();s.v24CookedMeals--;s.hunger=Math.min(100,s.hunger+Math.round(45*1.2));say('Refeição preparada consumida. Saciedade +20%. Restam '+s.v24CookedMeals+'.');save();return;}
  if(key==='z'&&id==='hunter'){ev.preventDefault();ev.stopImmediatePropagation();s.player.v24Scoped=!s.player.v24Scoped;say(s.player.v24Scoped?'Mira de caça ativada. Mire antes de disparar.':'Mira de caça desativada.');return;}
 },true);
 if(canvas){
