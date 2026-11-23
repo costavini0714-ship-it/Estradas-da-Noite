@@ -1,0 +1,59 @@
+OITO ENTRADAS — VERSÃO 24.7
+===============================
+
+Arquivos principais:
+- index.html: jogo
+- classes-v23.js: classes, atributos, habilidades, raridade de armas e melhorias pagas
+- class-systems-v24.js: sistemas adicionais de exploração e classes
+- editor.html: Estúdio Universal e manequim
+- servidor_multiplayer_v14.5.py: servidor multiplayer e sincronização do editor
+
+CONTROLES NOVOS
+- E: interagir com animais, plantas e travessias de água.
+- B: oficina de campo para Engenheiro/Carpinteiro; estação científica para Cientista.
+- C: cozinha portátil para Cozinheiro.
+- X: abrir laboratório do Cientista.
+- J: abrir agropecuária do Agricultor.
+- V: montar ou desmontar cavalo/burro domesticado.
+- Z: ativar/desativar a mira de caça.
+- Y: consumir sangue na forma vampírica do Híbrido.
+- L: ligar/desligar a lanterna da Segurança.
+- F: consumir uma refeição preparada pelo Cozinheiro.
+- Q: ativar a habilidade especial (mantém o controle original do jogo).
+
+SISTEMAS IMPLEMENTADOS
+- As 25 classes e suas melhorias pagas continuam disponíveis; o Líder foi removido e a Segurança substitui o nome antigo Vigia.
+- Melhorias pagas reduzem a recarga da habilidade em 4% por nível e reforçam benefícios específicos.
+- Médico: kit médico inicial, chance-base de erro de 50% nos procedimentos e puzzles mais fáceis.
+- Socorrista: chance-base de erro de 60%, 90% do benefício médico, velocidade e puzzles mais fáceis; indica aliados abaixo de 30% de vida.
+- Soldado: bônus de dano, habilidade existente e chance de arma especial em instalações militares.
+- Batedor: moto policial e chances especiais de armas em postos policiais/bases militares.
+- Catálogo com 61 espécies de fauna; uma parte aparece por expedição e animais se movem pelo mapa.
+- Agricultor pode domesticar animais, montar cavalos/burros e administrar a agropecuária.
+- Explorador, Agricultor, Cozinheiro e Cientista podem colher recursos silvestres.
+- Cozinheiro: fogueira e cozinha portátil para preparar folhas, frutas, cogumelos, ervas e carne.
+- Engenheiro: armadilhas, escutas, bancada e construções de campo.
+- Carpinteiro: projetos de madeira no campo e desconto de materiais.
+- Cientista: estação de pesquisa portátil e desenvolvimento de cura antiviral fictícia dentro do jogo.
+- Caçador: mira de caça conectada aos disparos, rastreio e obtenção de carne.
+- Navegador: barco e mecânica 2D de travessia de rios, lagos e áreas oceânicas.
+- Híbrido: mordida de vampiro/lobisomem completa a forma correspondente. Vampiro recebe invisibilidade contra monstros, visão noturna e recurso de sangue; lobisomem recebe visão noturna, velocidade e dano de garras.
+- Manequim Universal: ajustes por classe, item e pose (parado, andando e atacando), com marcação para equipar item/arma na mão.
+
+EDITOR
+Abra https://estradasdanoite.onrender.com/editor.
+Selecione o item já importado, escolha a classe e a pose, ajuste posição/ângulo/escala e marque “Equipar este item na mão da classe”. Depois use “Salvar e sincronizar”.
+O autoajuste do manequim usa predefinições; não é uma IA autônoma que calcula fisicamente qualquer esqueleto.
+
+LIMITES AINDA EXISTENTES
+- Fauna, água, armas e construção de campo são sistemas 2D integrados ao motor atual, não simulações 3D.
+- A mira do Caçador é uma luneta sobre o canvas, não uma câmera 3D em primeira pessoa.
+- O mapa escolhe uma seleção da fauna disponível; as 61 espécies estão cadastradas, mas não aparecem todas simultaneamente.
+- Os projetos de carpintaria são modelos predefinidos; ainda não existe construção livre de qualquer objeto imaginado.
+- A pesquisa científica implementa uma sequência de recursos/pontos para cura fictícia; não é uma IA geral de experimentação.
+- A mordida transforma a classe Híbrido no estado de forma correspondente dentro da partida; não altera a compra/desbloqueio permanente do perfil.
+- Não foi executado teste completo de gameplay/browser nesta atualização. Os arquivos JavaScript foram validados por análise de sintaxe.
+
+PUBLICAÇÃO
+No Render: Manual Deploy → Deploy latest commit.
+Para sincronizar configurações do editor com o site, o serviço precisa ter EDITOR_TOKEN configurado nas variáveis de ambiente.
