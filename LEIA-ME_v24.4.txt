@@ -1,4 +1,4 @@
-OITO ENTRADAS — ATUALIZAÇÃO 24.5
+OITO ENTRADAS — ATUALIZAÇÃO 24.6
 =================================
 
 ARQUIVOS
@@ -9,6 +9,7 @@ ARQUIVOS
 
 CONTROLES DA VERSÃO 24.4
 - E: interagir com objetos, animais, plantas e entradas de água.
+- B: também abre a estação científica de campo para o Cientista.
 - B: abrir oficina de campo (Engenheiro/Carpinteiro) ou estação científica (Cientista), durante exploração.
 - C: abrir cozinha portátil (Cozinheiro).
 - X: abrir laboratório de pesquisa (Cientista).
