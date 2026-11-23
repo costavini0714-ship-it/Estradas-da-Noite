@@ -42,6 +42,13 @@ function randPoint(map){
 }
 function ensureWorld(s){
  const map=s?.outsideMap;if(!map)return;
+ if(!map.waterway){
+  const roll=Math.random(),kind=map.reality==='fishing'?'ocean':roll<.36?'river':roll<.60?'lake':'none';
+  if(kind==='river')map.waterway={type:'river',x:480,width:58,bridgeY:325};
+  else if(kind==='lake')map.waterway={type:'lake',x:745,y:180,rx:104,ry:70};
+  else if(kind==='ocean')map.waterway={type:'ocean',y:300,height:150};
+  else map.waterway={type:'none'};
+ }
  if(!Array.isArray(map.wildlife)){
   map.wildlife=[];
   const count=8+Math.floor(Math.random()*5),pool=species.filter(a=>a.kind!=='aquatic');
@@ -68,6 +75,10 @@ function nearestWorldThing(s){
  const options=[];
  for(const a of map.wildlife||[]){if(a.tamed)continue;const d=Math.hypot(p.x-a.x,p.y-a.y);if(d<50)options.push({kind:'v24Animal',obj:a,d});}
  for(const n of map.forageNodes||[]){if(n.collected||n.amount<=0)continue;const d=Math.hypot(p.x-n.x,p.y-n.y);if(d<46)options.push({kind:'v24Forage',obj:n,d});}
+ const w=map.waterway;
+ if(w?.type==='river'){const d=Math.min(Math.abs(p.x-(w.x-w.width/2)),Math.abs(p.x-(w.x+w.width/2)));if(d<44)options.push({kind:'v24Water',obj:w,d});}
+ else if(w?.type==='lake'){const nx=(p.x-w.x)/(w.rx||1),ny=(p.y-w.y)/(w.ry||1),d=Math.abs(Math.sqrt(nx*nx+ny*ny)-1)*Math.min(w.rx,w.ry);if(d<42)options.push({kind:'v24Water',obj:w,d});}
+ else if(w?.type==='ocean'){const d=Math.abs(p.y-(w.y+w.height/2));if(d<42)options.push({kind:'v24Water',obj:w,d});}
  return options.sort((a,b)=>a.d-b.d)[0]||null;
 }
 function farmList(s){s.v24FarmAnimals=Array.isArray(s.v24FarmAnimals)?s.v24FarmAnimals:[];return s.v24FarmAnimals;}
@@ -98,8 +109,18 @@ function forage(n){
 function handleNear(){
  const s=state();if(!s||s.uiPanelOpen||s.activePuzzle)return false;
  const near=nearestWorldThing(s);if(!near)return false;
- if(near.kind==='v24Animal')onAnimal(near.obj);else forage(near.obj);
+ if(near.kind==='v24Animal')onAnimal(near.obj);
+ else if(near.kind==='v24Forage')forage(near.obj);
+ else if(near.kind==='v24Water')crossWater(near.obj);
  return true;
+}
+function crossWater(w){
+ const s=state(),p=s?.player;if(!s||!p)return;
+ if(role()!=='navigator'||!p.ownedVehicles?.includes('boat')||!s.tools?.boatKit){say('Esta travessia exige um Navegador com barco e kit de navegação.');return;}
+ if(w.type==='river')p.x=p.x<w.x?w.x+w.width/2+32:w.x-w.width/2-32;
+ else if(w.type==='lake')p.x=p.x<w.x?w.x+w.rx+28:w.x-w.rx-28;
+ else if(w.type==='ocean')p.y=p.y<w.y?w.y+w.height/2+28:w.y-w.height/2-28;
+ p.v24CrossingAt=now()+900;say('Travessia concluída com o barco.');save();
 }
 function sameRegion(s,obj){
  const region=s?.mode==='base'?'base_'+(s.stage||0):'map_'+(s?.outsideMap?.seed||0);
@@ -235,8 +256,24 @@ function drawField(ctx,s){
   ctx.restore();
  }
 }
+function drawWaterway(ctx,map){
+ const w=map?.waterway;if(!w||w.type==='none')return;ctx.save();
+ if(w.type==='river'){
+  ctx.fillStyle='#286b83e8';ctx.fillRect(w.x-w.width/2,0,w.width,620);
+  ctx.strokeStyle='#9bd2d6';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(w.x-w.width/2,0);ctx.lineTo(w.x-w.width/2,620);ctx.moveTo(w.x+w.width/2,0);ctx.lineTo(w.x+w.width/2,620);ctx.stroke();
+  ctx.fillStyle='#6b5438';ctx.fillRect(w.x-55,w.bridgeY-15,110,30);ctx.fillStyle='#b59a70';ctx.fillRect(w.x-55,w.bridgeY-11,110,22);ctx.fillStyle='#604a34';for(let x=w.x-45;x<w.x+50;x+=18)ctx.fillRect(x,w.bridgeY-15,4,30);
+ }else if(w.type==='lake'){
+  ctx.fillStyle='#286b83e8';ctx.beginPath();ctx.ellipse(w.x,w.y,w.rx,w.ry,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#9bd2d6';ctx.lineWidth=4;ctx.stroke();
+  ctx.strokeStyle='#b7e4e0aa';ctx.lineWidth=2;for(let y=-24;y<30;y+=24){ctx.beginPath();ctx.ellipse(w.x,w.y+y,w.rx*.58,w.ry*.38,0,0,Math.PI*2);ctx.stroke();}
+ }else if(w.type==='ocean'){
+  ctx.fillStyle='#205f7ae8';ctx.fillRect(0,w.y-w.height/2,1000,w.height);ctx.strokeStyle='#a4d8df';ctx.lineWidth=2;
+  for(let y=w.y-w.height/2+22;y<w.y+w.height/2;y+=32){ctx.beginPath();for(let x=0;x<=1000;x+=30){const yy=y+Math.sin((x+y)/38)*5;if(x===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);}ctx.stroke();}
+ }
+ ctx.restore();
+}
 function drawWildlife(ctx,s){
  if(s.mode!=='scavenge'||!s.outsideMap)return;
+ drawWaterway(ctx,s.outsideMap);
  for(const a of s.outsideMap.wildlife||[]){if(a.tamed)continue;ctx.save();ctx.translate(a.x,a.y);ctx.fillStyle='#07130b99';ctx.beginPath();ctx.ellipse(0,9,13,5,0,0,Math.PI*2);ctx.fill();ctx.font='20px system-ui';ctx.textAlign='center';ctx.fillText(a.icon||'🐾',0,4);if(Math.hypot(s.player.x-a.x,s.player.y-a.y)<70){ctx.font='bold 9px system-ui';ctx.fillStyle='#fff3cf';ctx.fillText(a.name,0,-18);}ctx.restore();}
  for(const n of s.outsideMap.forageNodes||[]){if(n.collected||n.amount<=0)continue;ctx.save();ctx.translate(n.x,n.y);ctx.font='18px system-ui';ctx.textAlign='center';ctx.fillText(n.icon||'🌿',0,5);ctx.restore();}
 }
@@ -244,6 +281,7 @@ function updateWorld(dt,s){
  if(!s)return;
  if(s.mode==='scavenge'&&s.outsideMap){
   ensureWorld(s);
+  const water=s.outsideMap.waterway;if(water&&water.type!=='none'&&!s.outsideMap.wildlife.some(a=>a.kind==='aquatic')){const aquatic=species.filter(a=>a.kind==='aquatic');for(let i=0;i<2;i++){const sp=aquatic[i],x=water.type==='river'?water.x:water.type==='lake'?water.x-water.rx*.3+i*water.rx*.6:500+i*80,y=water.type==='river'?150+i*260:water.type==='lake'?water.y+(i?15:-15):water.y; s.outsideMap.wildlife.push({id:sp.id+'_'+s.outsideMap.seed+'_'+i,speciesId:sp.id,name:sp.name,icon:sp.icon,kind:sp.kind,x,y,hp:100,tamed:false,targetX:x,targetY:y,roam:0});}}
   for(const a of s.outsideMap.wildlife||[]){
    if(a.tamed)continue;a.roam=(a.roam||0)-dt;
    const d=Math.hypot(s.player.x-a.x,s.player.y-a.y);
@@ -301,12 +339,22 @@ bridge.wrap('useMedicine',old=>function(...args){
 bridge.wrap('weaponDamage',old=>function(...args){const d=Number(old(...args))||0;return Math.round(d*(role()==='soldier'?1.18:1));});
 bridge.wrap('movePlayer',old=>function(dt,...args){const p=state()?.player;if(!p?.v24MountedAnimal)return old(dt,...args);const speed=p.speed;p.speed=speed*1.25;try{return old(dt,...args);}finally{p.speed=speed;}});
 bridge.wrap('update',old=>function(dt,...args){const result=old(dt,...args),s=state();updateWorld(dt,s);return result;});
-bridge.wrap('render',old=>function(...args){const result=old(...args),s=state(),ctx=bridge.getCanvasContext();if(ctx&&s){drawWildlife(ctx,s);drawField(ctx,s);}return result;});
+bridge.wrap('render',old=>function(...args){
+ const result=old(...args),s=state(),ctx=bridge.getCanvasContext();if(ctx&&s){drawWildlife(ctx,s);drawField(ctx,s);}
+ if(ctx&&s?.mode==='travel'&&s.player?.vehicleId==='boat'){
+  const p=s.player;ctx.save();ctx.fillStyle='#1b6786e8';ctx.fillRect(0,ctx.canvas.height/2-72,ctx.canvas.width,144);
+  ctx.strokeStyle='#a5d8e1';ctx.lineWidth=2;
+  for(let y=ctx.canvas.height/2-55;y<ctx.canvas.height/2+62;y+=27){ctx.beginPath();for(let x=0;x<=ctx.canvas.width;x+=26){const yy=y+Math.sin((x+y+performance.now()/35)/35)*4;if(x===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);}ctx.stroke();}
+  ctx.font='26px system-ui';ctx.textAlign='center';ctx.fillText('⛵',p.x,p.y+32);ctx.font='bold 11px system-ui';ctx.fillStyle='#e8f5f5';ctx.fillText('TRAVESSIA AQUÁTICA',ctx.canvas.width/2,ctx.canvas.height/2-82);ctx.restore();
+ }
+ return result;
+});
 bridge.wrap('advanceNight',old=>function(...args){const s=state(),before=Number(s?.nightsSurvived)||0,result=old(...args);if(s&&(Number(s.nightsSurvived)||0)>before)applyFarmProduction(s);return result;});
 function updatePrompt(){
  const s=state(),el=$('interactionPrompt'),near=nearestWorldThing(s);if(!el||!near||s?.uiPanelOpen)return;
  el.hidden=false;
  if(near.kind==='v24Animal')el.textContent=role()==='farmer'?'E · DOMESTICAR '+near.obj.name.toUpperCase()+' (1 COMIDA)':'E · OBSERVAR '+near.obj.name.toUpperCase();
+ else if(near.kind==='v24Water')el.textContent=role()==='navigator'?'E · ATRAVESSAR DE BARCO':'ÁGUA · EXIGE NAVEGADOR E BARCO';
  else el.textContent=gatherClasses.has(role())?'E · COLETAR '+near.obj.name.toUpperCase():'E · EXPLORAR '+near.obj.name.toUpperCase()+' · CLASSE ESPECIALIZADA';
 }
 bridge.wrap('update',old=>function(dt,...args){const r=old(dt,...args);updatePrompt();return r;});
@@ -314,6 +362,8 @@ document.addEventListener('keydown',ev=>{
  const s=state(),target=ev.target;if(!s?.gameStarted||target&&(target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target.tagName)))return;
  if(ev.repeat)return;
  const key=ev.key.toLowerCase(),id=role();
+ if(key==='e'&&nearestWorldThing(s)){ev.preventDefault();ev.stopImmediatePropagation();handleNear();return;}
+ if(key==='m'&&id==='farmer'){const p=s.player,animals=farmList(s).filter(a=>a.mountable);if(p.v24MountedAnimal){p.v24MountedAnimal=null;say('Você desmontou.');}else if(animals.length){p.v24MountedAnimal=animals[0].id;say('Você montou '+animals[0].name+'.');}else say('Domestique um cavalo ou burro primeiro.');save();return;}
  if(key==='b'&&s.mode==='scavenge'&&['engineer','carpenter'].includes(id)){ev.preventDefault();ev.stopImmediatePropagation();fieldPanel();return;}
  if(key==='c'&&id==='cook'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();cookPanel();return;}
  if(key==='x'&&id==='scientist'&&!s.uiPanelOpen){ev.preventDefault();ev.stopImmediatePropagation();researchPanel();return;}
