@@ -61,7 +61,7 @@
   let panel=$('v23ClassUpgrades');
   if(!panel){panel=document.createElement('section');panel.id='v23ClassUpgrades';panel.style.cssText='margin-top:10px;padding:10px;border:1px solid #596d64;border-radius:10px;background:#111f26';const foot=shop.querySelector('.v19-foot');shop.insertBefore(panel,foot||null);}
   const c=byId(selected())||classes[0],level=API.getClassUpgradeLevel?.(c.id)||0,owned=own(c.id);
-  panel.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Melhorias da classe: '+c.name+'</b><b style="color:#e8cf8b">'+level+'/3</b></div><p style="font-size:10px;color:#b9c9c7;margin:5px 0 8px">Três melhorias pagas, em ordem. Cada nível fortalece a especialidade sem apagar os atributos antigos.</p><div id="v23UpgradeButtons" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"></div>';
+  panel.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Melhorias da classe: '+c.name+'</b><b style="color:#e8cf8b">'+level+'/3</b></div><p style="font-size:10px;color:#b9c9c7;margin:5px 0 8px">Três melhorias pagas, em ordem. Cada nível reduz em 4% a recarga da habilidade e fortalece os bônus da especialidade, sem apagar atributos antigos.</p><div id="v23UpgradeButtons" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"></div>';
   const box=$('v23UpgradeButtons');
   for(let n=1;n<=3;n++){const b=document.createElement('button');b.type='button';b.className='btn '+(n<=level?'alt':'gold');b.disabled=!owned||n!==level+1||profile().coins<upgradePrice(c,n);b.textContent=n<=level?'Nível '+n+' · adquirido':'Nível '+n+' · 🪙 '+upgradePrice(c,n);b.addEventListener('click',()=>{const ok=API.buyClassUpgrade?.(c.id,n);notify(ok?'Melhoria de nível '+n+' comprada.':'Moedas insuficientes ou compre os níveis em ordem.');API.renderClassMenu?.();renderUpgradePanel();});box.append(b);}
  }
@@ -93,7 +93,7 @@
   hybrid_werewolf:{name:'Forma Lupina',description:'Garras, velocidade e sentidos ampliados.',cooldown:75000}
  };
  const skillCooldown=id=>skills[id]?.cooldown||55000;
- function setCooldown(ms){const p=state()?.player;if(p)p.v20AbilityReadyAt=Date.now()+ms;}
+ function setCooldown(ms){const p=state()?.player,level=Math.max(0,Math.min(3,Number(API.getClassUpgradeLevel?.(selected()))||0));if(p)p.v20AbilityReadyAt=Date.now()+Math.max(1000,Math.round(ms*(1-level*.04)));}
  function openChooser(title,description,targets,onChoose){
   $('v23ClassTargetChooser')?.remove();
   const root=document.createElement('div');root.id='v23ClassTargetChooser';root.style.cssText='position:fixed;inset:0;z-index:950;background:#071017ed;display:flex;align-items:center;justify-content:center;padding:14px';
