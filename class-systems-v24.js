@@ -343,7 +343,14 @@ function applyFarmProduction(s){
 }
 bridge.wrap('freshState',old=>function(...args){
  const s=old(...args),id=role();s.v24FarmAnimals=[];s.v24CookIngredients={berries:0,fruit:0,leaves:0,herbs:0,mushrooms:0,seeds:0};s.v24CookedMeals=0;s.v24ResearchPoints=0;s.v24CuredViruses=0;s.v24FarmProducts={eggs:0,feathers:0};s.v24BaseStructures=s.v24BaseStructures||[];
- if(s.player){s.player.classId=id;s.player.v24MountedAnimal=null;if(['hybrid','hybrid_vampire','hybrid_werewolf'].includes(id)){s.player.v24HybridForm=id==='hybrid'?'':id;s.player.v24HybridComplete=id!=='hybrid';s.player.v24Blood=Number(s.player.v24Blood)||3;} }
+ if(s.player){
+  s.player.classId=id;s.player.v24MountedAnimal=null;
+  if(['hybrid','hybrid_vampire','hybrid_werewolf'].includes(id)){
+   s.player.v24HybridForm=id==='hybrid'?'':id;s.player.v24HybridComplete=id!=='hybrid';s.player.v24Blood=Number(s.player.v24Blood)||3;
+   if(id==='hybrid_vampire'){s.player.v24NightVision=true;s.player.v23InvisibleUntil=Number.MAX_SAFE_INTEGER;s.player.v23SpeedUntil=Number.MAX_SAFE_INTEGER;}
+   if(id==='hybrid_werewolf'){s.player.v24NightVision=true;s.player.v23ClawsUntil=Number.MAX_SAFE_INTEGER;s.player.v23SpeedUntil=Number.MAX_SAFE_INTEGER;}
+  }
+ }
  const hand=bridge.getEditorConfig()?.universalRig?.handItems?.[id];
  if(hand?.kind==='weapon'&&bridge.getWeapons().some(w=>w.id===hand.id)){
   s.player.ownedWeapons=s.player.ownedWeapons||['club'];if(!s.player.ownedWeapons.includes(hand.id))s.player.ownedWeapons.push(hand.id);s.player.weaponId=hand.id;
@@ -502,5 +509,5 @@ window.__OITO_V24_SYSTEMS__={
  classes:{medic:{procedureError:.5},rescuer:{procedureError:.6,medicalSkill:.9},other:{procedureError:.8},soldier:{damageBonus:.18}},
  openFieldBuilder:fieldPanel,openCooking:cookPanel,openResearch:researchPanel,openFarm:farmPanel
 };
-console.info('[Oito Entradas] v24.7: fauna, agropecuária, coleta, cozinha, pesquisa, construção de campo, barco, caça e transformações híbridas.');
+console.info('[Oito Entradas] v24.8: fauna, agropecuária, coleta, cozinha, pesquisa, construção de campo, barco, caça e transformações híbridas.');
 })();
